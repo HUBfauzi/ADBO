@@ -30,14 +30,8 @@
             <input type="text" id="searchInput" placeholder="Cari laporan..." oninput="filterTable()" />
           </div>
           <div class="toolbar-actions">
-            <select class="form-select" id="filterStatus" onchange="filterTable()" style="width:180px;padding:9px 14px;">
+            <select class="form-select" id="filterStatus" onchange="filterTable()" style="width:220px;padding:9px 14px;">
               <option value="">Semua Status</option>
-              <option value="terkirim">Terkirim</option>
-              <option value="diverifikasi">Diverifikasi</option>
-              <option value="didisposisi">Didisposisi</option>
-              <option value="dalam_pengerjaan">Dalam Pengerjaan</option>
-              <option value="selesai">Selesai</option>
-              <option value="ditolak">Ditolak</option>
             </select>
             <a href="buat-laporan.html" class="btn btn-primary btn-sm">+ Buat Laporan</a>
           </div>
@@ -60,9 +54,8 @@
           </table>
         </div>
 
-        <!-- Detail Modal -->
         <div class="modal-overlay" id="detailModal">
-          <div class="modal" style="max-width:640px;">
+          <div class="modal" style="max-width:760px;">
             <div class="modal-header">
               <h2>Detail Laporan</h2>
               <button class="modal-close" onclick="closeModal()">✕</button>
@@ -80,15 +73,24 @@
   <script src="../../js/app.js"></script>
   <script>
     let allReports = [];
+    let fixPhotoBase64 = null;
 
     document.addEventListener('DOMContentLoaded', () => {
       if (!App.init('Status Laporan', ['masyarakat'])) return;
+      renderStatusFilter();
       loadTable();
     });
 
+    function renderStatusFilter() {
+      const select = document.getElementById('filterStatus');
+      DB.STATUSES.forEach(status => {
+        select.innerHTML += `<option value="${status}">${Utils.getStatusLabel(status)}</option>`;
+      });
+    }
+
     function loadTable() {
       const user = Auth.getCurrentUser();
-      allReports = DB.filter('laporan', l => l.userId === user.id)
+      allReports = DB.filter('reports', report => report.userId === user.id)
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       renderTable(allReports);
     }
@@ -97,8 +99,15 @@
       const search = document.getElementById('searchInput').value.toLowerCase();
       const status = document.getElementById('filterStatus').value;
       let filtered = allReports;
-      if (search) filtered = filtered.filter(l => l.judul.toLowerCase().includes(search) || l.lokasi.toLowerCase().includes(search));
-      if (status) filtered = filtered.filter(l => l.status === status);
+
+      if (search) {
+        filtered = filtered.filter(report => {
+          const title = Utils.getReportTitle(report).toLowerCase();
+          const location = Utils.getReportLocation(report).toLowerCase();
+          return title.includes(search) || location.includes(search);
+        });
+      }
+      if (status) filtered = filtered.filter(report => report.status === status);
       renderTable(filtered);
     }
 
@@ -108,80 +117,192 @@
         tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="icon">📭</div><h3>Tidak Ada Laporan</h3></div></td></tr>`;
         return;
       }
-      tbody.innerHTML = data.map((l, i) => `
+
+      tbody.innerHTML = data.map((report, i) => `
         <tr>
           <td>${i + 1}</td>
-          <td><strong>${Utils.escapeHtml(Utils.truncate(l.judul, 30))}</strong></td>
-          <td>${Utils.getCategoryIcon(l.kategoriId)} ${Utils.getCategoryName(l.kategoriId)}</td>
-          <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;">${Utils.escapeHtml(Utils.truncate(l.lokasi, 25))}</td>
-          <td>${Utils.getStatusBadge(l.status)}</td>
-          <td style="color:var(--text-muted);font-size:var(--font-size-xs)">${Utils.formatDate(l.createdAt)}</td>
+          <td><strong>${Utils.escapeHtml(Utils.truncate(Utils.getReportTitle(report), 32))}</strong></td>
+          <td>${Utils.getCategoryIcon(report.categoryId)} ${Utils.getCategoryName(report.categoryId)}</td>
+          <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;">${Utils.escapeHtml(Utils.truncate(Utils.getReportLocation(report), 28))}</td>
+          <td>${Utils.getStatusBadge(report.status)}</td>
+          <td style="color:var(--text-muted);font-size:var(--font-size-xs)">${Utils.formatDate(report.createdAt)}</td>
           <td>
             <div class="action-btns">
-              <button class="action-btn view" title="Lihat Detail" onclick="showDetail('${l.id}')">👁️</button>
+              <button class="action-btn view" title="Lihat Detail" onclick="showDetail('${report.id}')">👁️</button>
             </div>
           </td>
         </tr>
       `).join('');
     }
 
-    const statusOrder = ['terkirim', 'diverifikasi', 'didisposisi', 'dalam_pengerjaan', 'selesai'];
-    const statusLabels = ['Terkirim', 'Diverifikasi', 'Didisposisi', 'Dalam Pengerjaan', 'Selesai'];
-
-    function showDetail(id) {
-      const l = DB.getById('laporan', id);
-      if (!l) return;
-
-      const currentIdx = statusOrder.indexOf(l.status);
-      const isRejected = l.status === 'ditolak';
-
-      let tracker = '';
-      if (!isRejected) {
-        tracker = `<div class="status-tracker">${statusOrder.map((s, i) => {
-          let cls = '';
-          if (i < currentIdx) cls = 'completed';
-          else if (i === currentIdx) cls = 'active';
-          return `
-            <div class="tracker-step ${cls}">
-              <div class="tracker-dot">${i < currentIdx ? '✓' : (i + 1)}</div>
-              <div class="tracker-label">${statusLabels[i]}</div>
-            </div>
-            ${i < statusOrder.length - 1 ? '<div class="tracker-line"></div>' : ''}
-          `;
-        }).join('')}</div>`;
-      } else {
-        tracker = `<div style="padding:12px;border-radius:var(--radius-md);background:var(--accent-rose-light);color:var(--accent-rose);font-weight:600;text-align:center;">❌ Laporan Ditolak</div>`;
+    function buildTracker(report) {
+      if (report.status === 'ditolak') {
+        return `<div style="padding:12px;border-radius:var(--radius-md);background:var(--accent-rose-light);color:var(--accent-rose);font-weight:600;text-align:center;">❌ Laporan Ditolak</div>`;
       }
 
-      document.getElementById('detailContent').innerHTML = `
-        <div class="report-id" style="margin-bottom:16px;">#${l.id}</div>
-        ${tracker}
-        <div class="detail-grid" style="margin-top:20px;">
-          <div>
-            <div class="detail-item"><div class="label">Judul</div><div class="value">${Utils.escapeHtml(l.judul)}</div></div>
-            <div class="detail-item"><div class="label">Kategori</div><div class="value">${Utils.getCategoryIcon(l.kategoriId)} ${Utils.getCategoryName(l.kategoriId)}</div></div>
-            <div class="detail-item"><div class="label">Lokasi</div><div class="value">${Utils.escapeHtml(l.lokasi)}</div></div>
+      if (report.status === 'perlu_perbaikan_data') {
+        return `<div style="padding:12px;border-radius:var(--radius-md);background:var(--accent-amber-light);color:var(--accent-amber);font-weight:600;text-align:center;">⚠️ Perlu Perbaikan Data dari Masyarakat</div>`;
+      }
+
+      const currentIdx = DB.STATUS_FLOW.indexOf(report.status);
+      return `<div class="status-tracker">${DB.STATUS_FLOW.map((status, i) => {
+        let cls = '';
+        if (i < currentIdx) cls = 'completed';
+        else if (i === currentIdx) cls = 'active';
+        return `
+          <div class="tracker-step ${cls}">
+            <div class="tracker-dot">${i < currentIdx ? '✓' : (i + 1)}</div>
+            <div class="tracker-label">${Utils.getStatusLabel(status)}</div>
           </div>
-          <div>
-            <div class="detail-item"><div class="label">Tanggal Dibuat</div><div class="value">${Utils.formatDateTime(l.createdAt)}</div></div>
-            <div class="detail-item"><div class="label">Terakhir Update</div><div class="value">${Utils.formatDateTime(l.updatedAt)}</div></div>
-            ${l.petugasId ? `<div class="detail-item"><div class="label">Petugas</div><div class="value">${Utils.getUserName(l.petugasId)}</div></div>` : ''}
+          ${i < DB.STATUS_FLOW.length - 1 ? '<div class="tracker-line"></div>' : ''}
+        `;
+      }).join('')}</div>`;
+    }
+
+    function buildHistory(report) {
+      const history = Array.isArray(report.statusHistory) ? report.statusHistory : [];
+      if (history.length === 0) return '<p style="color:var(--text-muted);">Belum ada riwayat status.</p>';
+
+      return `
+        <ul class="activity-list">
+          ${history.slice().reverse().map(item => `
+            <li class="activity-item">
+              <div class="activity-dot"></div>
+              <div class="activity-content">
+                <p><strong>${Utils.getStatusLabel(item.status)}</strong>${item.note ? ` — ${Utils.escapeHtml(item.note)}` : ''}</p>
+                <div class="time">${Utils.formatDateTime(item.at)}${item.by ? ` oleh ${Utils.getUserName(item.by)}` : ''}</div>
+              </div>
+            </li>
+          `).join('')}
+        </ul>
+      `;
+    }
+
+    function buildFixForm(report) {
+      if (report.status !== 'perlu_perbaikan_data') return '';
+      const categoryOptions = DB.getAll('categories').map(category => `
+        <option value="${category.id}" ${category.id === report.categoryId ? 'selected' : ''}>${category.icon || '📋'} ${category.name || category.nama}</option>
+      `).join('');
+
+      return `
+        <div class="card" style="margin-top:18px;">
+          <div class="card-header"><h3>Perbaiki Data Laporan</h3></div>
+          <div class="card-body">
+            <div class="form-group">
+              <label class="form-label">Judul</label>
+              <input class="form-input" id="fixTitle" value="${Utils.escapeHtml(Utils.getReportTitle(report))}" />
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Kategori</label>
+                <select class="form-select" id="fixCategory">${categoryOptions}</select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Lokasi</label>
+                <input class="form-input" id="fixLocation" value="${Utils.escapeHtml(Utils.getReportLocation(report))}" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Deskripsi</label>
+              <textarea class="form-textarea" id="fixDescription" rows="3">${Utils.escapeHtml(Utils.getReportDescription(report))}</textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Ganti Foto Kerusakan</label>
+              <input type="file" class="form-input" id="fixPhoto" accept="image/*" onchange="previewFixPhoto(this)" />
+            </div>
+            <button class="btn btn-primary" onclick="submitFix('${report.id}')">Kirim Ulang Perbaikan Data</button>
           </div>
         </div>
-        <div class="detail-item" style="margin-top:8px;"><div class="label">Deskripsi</div><div class="value">${Utils.escapeHtml(l.deskripsi)}</div></div>
-        ${l.catatanAdmin ? `<div class="detail-item" style="margin-top:12px;"><div class="label">Catatan Admin</div><div class="value" style="color:var(--accent-amber);">${Utils.escapeHtml(l.catatanAdmin)}</div></div>` : ''}
-        ${l.catatanPetugas ? `<div class="detail-item" style="margin-top:12px;"><div class="label">Catatan Petugas</div><div class="value" style="color:var(--accent-cyan);">${Utils.escapeHtml(l.catatanPetugas)}</div></div>` : ''}
-        ${l.foto ? `<div class="detail-item" style="margin-top:12px;"><div class="label">Foto Kerusakan</div><div class="file-preview" style="display:block;"><img src="${l.foto}" alt="Foto" /></div></div>` : ''}
-        ${l.fotoBukti ? `<div class="detail-item" style="margin-top:12px;"><div class="label">Bukti Perbaikan</div><div class="file-preview" style="display:block;"><img src="${l.fotoBukti}" alt="Bukti" /></div></div>` : ''}
+      `;
+    }
+
+    function showDetail(id) {
+      fixPhotoBase64 = null;
+      const report = DB.getById('reports', id);
+      if (!report) return;
+
+      const damagePhoto = Utils.getReportPhoto(report);
+      const repairPhoto = Utils.getRepairPhoto(report);
+
+      document.getElementById('detailContent').innerHTML = `
+        <div class="report-id" style="margin-bottom:16px;">#${report.id}</div>
+        ${buildTracker(report)}
+        <div class="detail-grid" style="margin-top:20px;">
+          <div>
+            <div class="detail-item"><div class="label">Judul</div><div class="value">${Utils.escapeHtml(Utils.getReportTitle(report))}</div></div>
+            <div class="detail-item"><div class="label">Kategori</div><div class="value">${Utils.getCategoryIcon(report.categoryId)} ${Utils.getCategoryName(report.categoryId)}</div></div>
+            <div class="detail-item"><div class="label">Lokasi</div><div class="value">${Utils.escapeHtml(Utils.getReportLocation(report))}</div></div>
+          </div>
+          <div>
+            <div class="detail-item"><div class="label">Tanggal Dibuat</div><div class="value">${Utils.formatDateTime(report.createdAt)}</div></div>
+            <div class="detail-item"><div class="label">Terakhir Update</div><div class="value">${Utils.formatDateTime(report.updatedAt)}</div></div>
+            ${report.petugasId ? `<div class="detail-item"><div class="label">Petugas</div><div class="value">${Utils.getUserName(report.petugasId)}</div></div>` : ''}
+          </div>
+        </div>
+        <div class="detail-item" style="margin-top:8px;"><div class="label">Deskripsi</div><div class="value">${Utils.escapeHtml(Utils.getReportDescription(report))}</div></div>
+        ${report.adminNote ? `<div class="detail-item" style="margin-top:12px;"><div class="label">Catatan Admin</div><div class="value" style="color:var(--accent-amber);">${Utils.escapeHtml(report.adminNote)}</div></div>` : ''}
+        ${report.officerNote ? `<div class="detail-item" style="margin-top:12px;"><div class="label">Catatan Petugas</div><div class="value" style="color:var(--accent-cyan);">${Utils.escapeHtml(report.officerNote)}</div></div>` : ''}
+        ${damagePhoto ? `<div class="detail-item" style="margin-top:12px;"><div class="label">Foto Kerusakan</div><div class="file-preview" style="display:block;"><img src="${damagePhoto}" alt="Foto kerusakan" /></div></div>` : ''}
+        ${repairPhoto ? `<div class="detail-item" style="margin-top:12px;"><div class="label">Bukti Perbaikan</div><div class="file-preview" style="display:block;"><img src="${repairPhoto}" alt="Bukti perbaikan" /></div></div>` : ''}
+        <div class="card" style="margin-top:18px;">
+          <div class="card-header"><h3>Riwayat Status</h3></div>
+          <div class="card-body">${buildHistory(report)}</div>
+        </div>
+        ${buildFixForm(report)}
       `;
       document.getElementById('detailModal').classList.add('show');
+    }
+
+    function previewFixPhoto(input) {
+      const file = input.files[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) {
+        Utils.showToast('Ukuran file melebihi 2MB.', 'error');
+        input.value = '';
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = event => {
+        fixPhotoBase64 = event.target.result;
+        Utils.showToast('Foto pengganti siap dikirim.', 'success');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function submitFix(id) {
+      const report = DB.getById('reports', id);
+      if (!report) return;
+
+      const title = document.getElementById('fixTitle').value.trim();
+      const categoryId = document.getElementById('fixCategory').value;
+      const location = document.getElementById('fixLocation').value.trim();
+      const description = document.getElementById('fixDescription').value.trim();
+
+      if (!title || !categoryId || !location || !description) {
+        Utils.showToast('Lengkapi semua data laporan.', 'error');
+        return;
+      }
+
+      DB.updateReportStatus(id, 'menunggu_verifikasi', {
+        title,
+        description,
+        categoryId,
+        location,
+        damagePhoto: fixPhotoBase64 || Utils.getReportPhoto(report),
+        adminNote: 'Data telah diperbaiki oleh masyarakat dan dikirim ulang.',
+        statusNote: 'Masyarakat memperbaiki data laporan.'
+      });
+
+      closeModal();
+      loadTable();
+      Utils.showToast('Perbaikan data berhasil dikirim ulang.', 'success');
     }
 
     function closeModal() {
       document.getElementById('detailModal').classList.remove('show');
     }
 
-    document.getElementById('detailModal').addEventListener('click', (e) => {
+    document.getElementById('detailModal').addEventListener('click', e => {
       if (e.target.classList.contains('modal-overlay')) closeModal();
     });
   </script>

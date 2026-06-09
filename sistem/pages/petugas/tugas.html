@@ -21,7 +21,7 @@
       <main class="page-content">
         <div class="page-header">
           <h1>🔧 Daftar Tugas</h1>
-          <p>Semua tugas perbaikan yang ditugaskan kepada Anda.</p>
+          <p>Semua tugas perbaikan yang didisposisikan kepada Anda.</p>
         </div>
 
         <div class="toolbar">
@@ -29,10 +29,13 @@
             <span class="icon">🔍</span>
             <input type="text" id="searchInput" placeholder="Cari tugas..." oninput="filterTable()" />
           </div>
-          <select class="form-select" id="filterStatus" onchange="filterTable()" style="width:180px;padding:9px 14px;">
+          <select class="form-select" id="filterStatus" onchange="filterTable()" style="width:220px;padding:9px 14px;">
             <option value="">Semua Status</option>
-            <option value="didisposisi">Didisposisi</option>
-            <option value="dalam_pengerjaan">Dalam Pengerjaan</option>
+            <option value="didisposisikan">Didisposisikan</option>
+            <option value="menunggu_diproses">Menunggu Diproses</option>
+            <option value="dalam_perbaikan">Dalam Perbaikan</option>
+            <option value="status_diperbarui">Status Diperbarui</option>
+            <option value="bukti_diunggah">Bukti Diunggah</option>
             <option value="selesai">Selesai</option>
           </select>
         </div>
@@ -42,6 +45,17 @@
             <thead><tr><th>No</th><th>Judul</th><th>Kategori</th><th>Lokasi</th><th>Status</th><th>Tanggal Disposisi</th><th>Aksi</th></tr></thead>
             <tbody id="tableBody"></tbody>
           </table>
+        </div>
+
+        <div class="modal-overlay" id="taskModal">
+          <div class="modal" style="max-width:760px;">
+            <div class="modal-header">
+              <h2>Proses Tugas Perbaikan</h2>
+              <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body" id="taskContent"></div>
+            <div class="modal-footer" id="taskFooter"></div>
+          </div>
         </div>
       </main>
     </div>
@@ -53,43 +67,182 @@
   <script src="../../js/app.js"></script>
   <script>
     let allTasks = [];
+    let currentId = null;
+    let proofBase64 = null;
 
     document.addEventListener('DOMContentLoaded', () => {
       if (!App.init('Daftar Tugas', ['petugas'])) return;
+      loadTasks();
+
+      const requestedId = Utils.getParam('id');
+      if (requestedId && allTasks.some(report => report.id === requestedId)) {
+        openTask(requestedId);
+      }
+    });
+
+    function loadTasks() {
       const user = Auth.getCurrentUser();
-      allTasks = DB.filter('laporan', l => l.petugasId === user.id)
+      allTasks = DB.filter('reports', report => report.petugasId === user.id)
         .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
       renderTable(allTasks);
-    });
+    }
 
     function filterTable() {
       const search = document.getElementById('searchInput').value.toLowerCase();
       const status = document.getElementById('filterStatus').value;
       let filtered = allTasks;
-      if (search) filtered = filtered.filter(l => l.judul.toLowerCase().includes(search));
-      if (status) filtered = filtered.filter(l => l.status === status);
+
+      if (search) {
+        filtered = filtered.filter(report => {
+          const title = Utils.getReportTitle(report).toLowerCase();
+          const location = Utils.getReportLocation(report).toLowerCase();
+          return title.includes(search) || location.includes(search);
+        });
+      }
+      if (status) filtered = filtered.filter(report => report.status === status);
       renderTable(filtered);
     }
 
     function renderTable(data) {
+      const tbody = document.getElementById('tableBody');
       if (data.length === 0) {
-        document.getElementById('tableBody').innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="icon">📭</div><h3>Tidak Ada Tugas</h3></div></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="icon">📭</div><h3>Tidak Ada Tugas</h3></div></td></tr>`;
         return;
       }
-      document.getElementById('tableBody').innerHTML = data.map((l, i) => `
+
+      tbody.innerHTML = data.map((report, i) => `
         <tr>
           <td>${i + 1}</td>
-          <td><strong>${Utils.escapeHtml(Utils.truncate(l.judul, 28))}</strong></td>
-          <td>${Utils.getCategoryIcon(l.kategoriId)} ${Utils.getCategoryName(l.kategoriId)}</td>
-          <td>${Utils.escapeHtml(Utils.truncate(l.lokasi, 22))}</td>
-          <td>${Utils.getStatusBadge(l.status)}</td>
-          <td style="color:var(--text-muted);font-size:var(--font-size-xs)">${Utils.formatDate(l.updatedAt || l.createdAt)}</td>
+          <td><strong>${Utils.escapeHtml(Utils.truncate(Utils.getReportTitle(report), 30))}</strong></td>
+          <td>${Utils.getCategoryIcon(report.categoryId)} ${Utils.getCategoryName(report.categoryId)}</td>
+          <td>${Utils.escapeHtml(Utils.truncate(Utils.getReportLocation(report), 26))}</td>
+          <td>${Utils.getStatusBadge(report.status)}</td>
+          <td style="color:var(--text-muted);font-size:var(--font-size-xs)">${Utils.formatDate(report.updatedAt || report.createdAt)}</td>
           <td>
-            ${l.status !== 'selesai' ? `<a href="proses.html?id=${l.id}" class="btn btn-primary btn-sm">⚙️ Proses</a>` : `<span class="badge badge-selesai">✅ Selesai</span>`}
+            ${report.status !== 'selesai'
+              ? `<button class="btn btn-primary btn-sm" onclick="openTask('${report.id}')">⚙️ Update</button>`
+              : `<button class="btn btn-outline btn-sm" onclick="openTask('${report.id}')">👁️ Detail</button>`}
           </td>
         </tr>
       `).join('');
     }
+
+    function openTask(id) {
+      currentId = id;
+      proofBase64 = null;
+      const report = DB.getById('reports', id);
+      const damagePhoto = Utils.getReportPhoto(report);
+      const repairPhoto = Utils.getRepairPhoto(report);
+      const editable = report.status !== 'selesai';
+
+      document.getElementById('taskContent').innerHTML = `
+        <div class="detail-grid">
+          <div>
+            <div class="detail-item"><div class="label">Judul</div><div class="value">${Utils.escapeHtml(Utils.getReportTitle(report))}</div></div>
+            <div class="detail-item"><div class="label">Kategori</div><div class="value">${Utils.getCategoryIcon(report.categoryId)} ${Utils.getCategoryName(report.categoryId)}</div></div>
+            <div class="detail-item"><div class="label">Lokasi</div><div class="value">${Utils.escapeHtml(Utils.getReportLocation(report))}</div></div>
+          </div>
+          <div>
+            <div class="detail-item"><div class="label">Pelapor</div><div class="value">${Utils.getUserName(report.userId)}</div></div>
+            <div class="detail-item"><div class="label">Status Saat Ini</div><div class="value">${Utils.getStatusBadge(report.status)}</div></div>
+            <div class="detail-item"><div class="label">Tanggal Masuk</div><div class="value">${Utils.formatDateTime(report.createdAt)}</div></div>
+          </div>
+        </div>
+        <div class="detail-item"><div class="label">Deskripsi</div><div class="value">${Utils.escapeHtml(Utils.getReportDescription(report))}</div></div>
+        ${report.adminNote ? `<div class="detail-item"><div class="label">Catatan Admin</div><div class="value" style="color:var(--accent-amber);">${Utils.escapeHtml(report.adminNote)}</div></div>` : ''}
+        ${damagePhoto ? `<div class="detail-item"><div class="label">Foto Kerusakan</div><div class="file-preview" style="display:block"><img src="${damagePhoto}" alt="Foto kerusakan"/></div></div>` : ''}
+        ${repairPhoto ? `<div class="detail-item"><div class="label">Bukti Perbaikan Saat Ini</div><div class="file-preview" style="display:block"><img src="${repairPhoto}" alt="Bukti perbaikan"/></div></div>` : ''}
+        ${editable ? buildUpdateForm(report) : `<div class="empty-state"><div class="icon">✅</div><h3>Tugas Selesai</h3><p>Status laporan sudah selesai dan dapat dilihat oleh masyarakat serta Kepala Dinas.</p></div>`}
+      `;
+
+      document.getElementById('taskFooter').innerHTML = editable
+        ? `<button class="btn btn-outline" onclick="closeModal()">Batal</button><button class="btn btn-primary" onclick="saveProgress()">Simpan Update</button>`
+        : `<button class="btn btn-outline" onclick="closeModal()">Tutup</button>`;
+
+      document.getElementById('taskModal').classList.add('show');
+    }
+
+    function buildUpdateForm(report) {
+      const options = [
+        'menunggu_diproses',
+        'dalam_perbaikan',
+        'status_diperbarui',
+        'bukti_diunggah',
+        'selesai'
+      ].map(status => `<option value="${status}" ${status === report.status ? 'selected' : ''}>${Utils.getStatusLabel(status)}</option>`).join('');
+
+      return `
+        <div class="card" style="margin-top:18px;">
+          <div class="card-header"><h3>Update Perbaikan</h3></div>
+          <div class="card-body">
+            <div class="form-group">
+              <label class="form-label">Status Baru *</label>
+              <select id="statusUpdate" class="form-select">${options}</select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Keterangan Perbaikan</label>
+              <textarea id="catatanPetugas" class="form-textarea" rows="3" placeholder="Contoh: Perbaikan dimulai, material sudah disiapkan, atau pekerjaan selesai.">${Utils.escapeHtml(report.officerNote || '')}</textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Upload Bukti Perbaikan</label>
+              <input type="file" id="buktiInput" class="form-input" accept="image/*" onchange="previewProof(this)" />
+              <div class="form-help">Wajib saat memilih status Bukti Diunggah atau Selesai.</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function previewProof(input) {
+      const file = input.files[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) {
+        Utils.showToast('Ukuran file melebihi 2MB.', 'error');
+        input.value = '';
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = event => {
+        proofBase64 = event.target.result;
+        Utils.showToast('Bukti perbaikan siap disimpan.', 'success');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function saveProgress() {
+      const report = DB.getById('reports', currentId);
+      const nextStatus = document.getElementById('statusUpdate').value;
+      const note = document.getElementById('catatanPetugas').value.trim();
+      const existingProof = Utils.getRepairPhoto(report);
+
+      if (['bukti_diunggah', 'selesai'].includes(nextStatus) && !proofBase64 && !existingProof) {
+        Utils.showToast('Upload bukti perbaikan terlebih dahulu.', 'error');
+        return;
+      }
+
+      DB.updateReportStatus(currentId, nextStatus, {
+        officerNote: note || 'Petugas memperbarui progres perbaikan.',
+        repairPhoto: proofBase64 || existingProof,
+        statusNote: note || 'Petugas memperbarui status laporan.'
+      });
+
+      const assignment = DB.getAll('assignments').find(item => item.reportId === currentId);
+      if (assignment) {
+        DB.update('assignments', assignment.id, { status: nextStatus === 'selesai' ? 'selesai' : 'aktif' });
+      }
+
+      closeModal();
+      loadTasks();
+      Utils.showToast('Status tugas berhasil diperbarui.', 'success');
+    }
+
+    function closeModal() {
+      document.getElementById('taskModal').classList.remove('show');
+    }
+
+    document.getElementById('taskModal').addEventListener('click', e => {
+      if (e.target.classList.contains('modal-overlay')) closeModal();
+    });
   </script>
 </body>
 </html>

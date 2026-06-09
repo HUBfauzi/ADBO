@@ -98,18 +98,36 @@
 }
 
 /* ── Status Colors ── */
-.status-draft { color: var(--text-muted); }
+.status-diajukan,
+.status-menunggu-verifikasi,
 .status-terkirim { color: var(--accent-sky); }
-.status-diverifikasi { color: var(--accent-cyan); }
-.status-didisposisi { color: var(--accent-amber); }
-.status-dalam-pengerjaan { color: var(--accent-violet); }
-.status-selesai { color: var(--accent-emerald); }
+
+.status-perlu-perbaikan-data { color: var(--accent-amber); }
 .status-ditolak { color: var(--accent-rose); }
+.status-terverifikasi,
+.status-diverifikasi { color: var(--accent-cyan); }
+.status-didisposisikan,
+.status-didisposisi { color: var(--accent-amber); }
+.status-menunggu-diproses { color: var(--accent-primary); }
+.status-dalam-perbaikan,
+.status-dalam-pengerjaan { color: var(--accent-violet); }
+.status-status-diperbarui { color: var(--accent-sky); }
+.status-bukti-diunggah { color: var(--accent-cyan); }
+.status-selesai { color: var(--accent-emerald); }
 
 .badge-draft { background: rgba(100,116,139,0.15); color: var(--text-muted); }
+.badge-diajukan,
+.badge-menunggu-verifikasi,
 .badge-terkirim { background: var(--accent-sky-light); color: var(--accent-sky); }
-.badge-diverifikasi { background: var(--accent-cyan-light); color: var(--accent-cyan); }
-.badge-didisposisi { background: var(--accent-amber-light); color: var(--accent-amber); }
-.badge-dalam-pengerjaan { background: rgba(167,139,250,0.12); color: var(--accent-violet); }
-.badge-selesai { background: var(--accent-emerald-light); color: var(--accent-emerald); }
+.badge-perlu-perbaikan-data { background: var(--accent-amber-light); color: var(--accent-amber); }
 .badge-ditolak { background: var(--accent-rose-light); color: var(--accent-rose); }
+.badge-terverifikasi,
+.badge-diverifikasi { background: var(--accent-cyan-light); color: var(--accent-cyan); }
+.badge-didisposisikan,
+.badge-didisposisi { background: var(--accent-amber-light); color: var(--accent-amber); }
+.badge-menunggu-diproses { background: var(--accent-primary-light); color: var(--accent-primary); }
+.badge-dalam-perbaikan,
+.badge-dalam-pengerjaan { background: rgba(167,139,250,0.12); color: var(--accent-violet); }
+.badge-status-diperbarui { background: var(--accent-sky-light); color: var(--accent-sky); }
+.badge-bukti-diunggah { background: var(--accent-cyan-light); color: var(--accent-cyan); }
+.badge-selesai { background: var(--accent-emerald-light); color: var(--accent-emerald); }

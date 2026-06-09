@@ -21,21 +21,20 @@
       <main class="page-content">
         <div class="page-header">
           <h1>✅ Verifikasi Laporan</h1>
-          <p>Periksa dan verifikasi laporan kerusakan yang masuk dari masyarakat.</p>
+          <p>Periksa laporan masuk, lalu tandai sebagai terverifikasi, perlu perbaikan data, atau ditolak.</p>
         </div>
 
         <div class="table-wrapper">
           <table class="data-table">
             <thead>
-              <tr><th>No</th><th>Judul</th><th>Pelapor</th><th>Kategori</th><th>Lokasi</th><th>Tanggal</th><th>Aksi</th></tr>
+              <tr><th>No</th><th>Judul</th><th>Pelapor</th><th>Kategori</th><th>Status</th><th>Tanggal</th><th>Aksi</th></tr>
             </thead>
             <tbody id="tableBody"></tbody>
           </table>
         </div>
 
-        <!-- Verify Modal -->
         <div class="modal-overlay" id="verifyModal">
-          <div class="modal" style="max-width:580px;">
+          <div class="modal" style="max-width:680px;">
             <div class="modal-header">
               <h2>Verifikasi Laporan</h2>
               <button class="modal-close" onclick="closeModal()">✕</button>
@@ -61,7 +60,7 @@
     });
 
     function loadTable() {
-      const pending = DB.filter('laporan', l => l.status === 'terkirim')
+      const pending = DB.filter('reports', report => ['diajukan', 'menunggu_verifikasi'].includes(report.status))
         .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
       const tbody = document.getElementById('tableBody');
 
@@ -70,18 +69,18 @@
         return;
       }
 
-      tbody.innerHTML = pending.map((l, i) => `
+      tbody.innerHTML = pending.map((report, i) => `
         <tr>
           <td>${i + 1}</td>
-          <td><strong>${Utils.escapeHtml(Utils.truncate(l.judul, 28))}</strong></td>
-          <td>${Utils.getUserName(l.userId)}</td>
-          <td>${Utils.getCategoryIcon(l.kategoriId)} ${Utils.getCategoryName(l.kategoriId)}</td>
-          <td>${Utils.escapeHtml(Utils.truncate(l.lokasi, 20))}</td>
-          <td style="font-size:var(--font-size-xs);color:var(--text-muted)">${Utils.formatDate(l.createdAt)}</td>
+          <td><strong>${Utils.escapeHtml(Utils.truncate(Utils.getReportTitle(report), 30))}</strong></td>
+          <td>${Utils.getUserName(report.userId)}</td>
+          <td>${Utils.getCategoryIcon(report.categoryId)} ${Utils.getCategoryName(report.categoryId)}</td>
+          <td>${Utils.getStatusBadge(report.status)}</td>
+          <td style="font-size:var(--font-size-xs);color:var(--text-muted)">${Utils.formatDate(report.createdAt)}</td>
           <td>
             <div class="action-btns">
-              <button class="action-btn approve" title="Verifikasi" onclick="openVerify('${l.id}')">✅</button>
-              <button class="action-btn delete" title="Tolak" onclick="rejectReport('${l.id}')">❌</button>
+              <button class="action-btn view" title="Lihat dan verifikasi" onclick="openVerify('${report.id}')">👁️</button>
+              <button class="action-btn approve" title="Verifikasi cepat" onclick="quickVerify('${report.id}')">✅</button>
             </div>
           </td>
         </tr>
@@ -90,53 +89,89 @@
 
     function openVerify(id) {
       currentId = id;
-      const l = DB.getById('laporan', id);
+      const report = DB.getById('reports', id);
+      const damagePhoto = Utils.getReportPhoto(report);
+
       document.getElementById('verifyContent').innerHTML = `
-        <div class="detail-item"><div class="label">Judul</div><div class="value">${Utils.escapeHtml(l.judul)}</div></div>
-        <div class="detail-item"><div class="label">Pelapor</div><div class="value">${Utils.getUserName(l.userId)}</div></div>
-        <div class="detail-item"><div class="label">Kategori</div><div class="value">${Utils.getCategoryIcon(l.kategoriId)} ${Utils.getCategoryName(l.kategoriId)}</div></div>
-        <div class="detail-item"><div class="label">Lokasi</div><div class="value">${Utils.escapeHtml(l.lokasi)}</div></div>
-        <div class="detail-item"><div class="label">Deskripsi</div><div class="value">${Utils.escapeHtml(l.deskripsi)}</div></div>
-        ${l.foto ? `<div class="detail-item"><div class="label">Foto</div><div class="file-preview" style="display:block"><img src="${l.foto}" alt="Foto"/></div></div>` : ''}
+        <div class="detail-grid">
+          <div>
+            <div class="detail-item"><div class="label">Judul</div><div class="value">${Utils.escapeHtml(Utils.getReportTitle(report))}</div></div>
+            <div class="detail-item"><div class="label">Pelapor</div><div class="value">${Utils.getUserName(report.userId)}</div></div>
+            <div class="detail-item"><div class="label">Kategori</div><div class="value">${Utils.getCategoryIcon(report.categoryId)} ${Utils.getCategoryName(report.categoryId)}</div></div>
+          </div>
+          <div>
+            <div class="detail-item"><div class="label">Status Saat Ini</div><div class="value">${Utils.getStatusBadge(report.status)}</div></div>
+            <div class="detail-item"><div class="label">Tanggal Masuk</div><div class="value">${Utils.formatDateTime(report.createdAt)}</div></div>
+            <div class="detail-item"><div class="label">Lokasi</div><div class="value">${Utils.escapeHtml(Utils.getReportLocation(report))}</div></div>
+          </div>
+        </div>
+        <div class="detail-item"><div class="label">Deskripsi</div><div class="value">${Utils.escapeHtml(Utils.getReportDescription(report))}</div></div>
+        ${damagePhoto ? `<div class="detail-item"><div class="label">Foto Kerusakan</div><div class="file-preview" style="display:block"><img src="${damagePhoto}" alt="Foto kerusakan"/></div></div>` : ''}
         <div class="form-group" style="margin-top:16px;">
           <label class="form-label">Catatan Admin</label>
-          <textarea id="catatanAdmin" class="form-textarea" placeholder="Tambahkan catatan verifikasi (opsional)..." rows="2"></textarea>
+          <textarea id="catatanAdmin" class="form-textarea" placeholder="Tuliskan alasan verifikasi, kebutuhan perbaikan data, atau alasan penolakan..." rows="3"></textarea>
         </div>
       `;
       document.getElementById('verifyFooter').innerHTML = `
         <button class="btn btn-outline" onclick="closeModal()">Batal</button>
-        <button class="btn btn-danger" onclick="doReject()">❌ Tolak</button>
-        <button class="btn btn-success" onclick="doVerify()">✅ Verifikasi</button>
+        <button class="btn btn-warning" onclick="needFix()">⚠️ Perlu Perbaikan Data</button>
+        <button class="btn btn-danger" onclick="rejectReport()">❌ Tolak</button>
+        <button class="btn btn-success" onclick="verifyReport()">✅ Terverifikasi</button>
       `;
       document.getElementById('verifyModal').classList.add('show');
     }
 
-    function doVerify() {
-      const catatan = document.getElementById('catatanAdmin').value.trim();
-      DB.update('laporan', currentId, { status: 'diverifikasi', catatanAdmin: catatan || 'Laporan valid.' });
+    function getAdminNote(defaultNote) {
+      const input = document.getElementById('catatanAdmin');
+      return input && input.value.trim() ? input.value.trim() : defaultNote;
+    }
+
+    function quickVerify(id) {
+      DB.updateReportStatus(id, 'terverifikasi', {
+        adminNote: 'Laporan valid dan siap didisposisikan.',
+        statusNote: 'Admin memverifikasi laporan.'
+      });
+      loadTable();
+      Utils.showToast('Laporan berhasil diverifikasi.', 'success');
+    }
+
+    function verifyReport() {
+      DB.updateReportStatus(currentId, 'terverifikasi', {
+        adminNote: getAdminNote('Laporan valid dan siap didisposisikan.'),
+        statusNote: 'Admin memverifikasi laporan.'
+      });
       closeModal();
       loadTable();
       Utils.showToast('Laporan berhasil diverifikasi.', 'success');
     }
 
-    function doReject() {
-      const catatan = document.getElementById('catatanAdmin').value.trim();
-      DB.update('laporan', currentId, { status: 'ditolak', catatanAdmin: catatan || 'Laporan ditolak.' });
+    function needFix() {
+      DB.updateReportStatus(currentId, 'perlu_perbaikan_data', {
+        adminNote: getAdminNote('Data laporan belum lengkap. Mohon perbaiki judul, lokasi, deskripsi, atau foto.'),
+        statusNote: 'Admin meminta perbaikan data laporan.'
+      });
+      closeModal();
+      loadTable();
+      Utils.showToast('Laporan dikembalikan untuk perbaikan data.', 'warning');
+    }
+
+    function rejectReport() {
+      DB.updateReportStatus(currentId, 'ditolak', {
+        adminNote: getAdminNote('Laporan ditolak karena tidak valid atau duplikat.'),
+        statusNote: 'Admin menolak laporan.'
+      });
       closeModal();
       loadTable();
       Utils.showToast('Laporan ditolak.', 'warning');
     }
 
-    function rejectReport(id) {
-      if (confirm('Yakin ingin menolak laporan ini?')) {
-        DB.update('laporan', id, { status: 'ditolak', catatanAdmin: 'Laporan ditolak oleh admin.' });
-        loadTable();
-        Utils.showToast('Laporan ditolak.', 'warning');
-      }
+    function closeModal() {
+      document.getElementById('verifyModal').classList.remove('show');
     }
 
-    function closeModal() { document.getElementById('verifyModal').classList.remove('show'); }
-    document.getElementById('verifyModal').addEventListener('click', e => { if (e.target.classList.contains('modal-overlay')) closeModal(); });
+    document.getElementById('verifyModal').addEventListener('click', e => {
+      if (e.target.classList.contains('modal-overlay')) closeModal();
+    });
   </script>
 </body>
 </html>

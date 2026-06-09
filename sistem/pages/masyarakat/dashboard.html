@@ -47,10 +47,12 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       if (!App.init('Dashboard', ['masyarakat'])) return;
-      const user = Auth.getCurrentUser();
-      const myReports = DB.filter('laporan', l => l.userId === user.id);
 
-      // Stats
+      const user = Auth.getCurrentUser();
+      const myReports = DB.filter('reports', report => report.userId === user.id);
+      const waitingStatuses = ['diajukan', 'menunggu_verifikasi', 'terverifikasi', 'didisposisikan', 'menunggu_diproses'];
+      const workStatuses = ['dalam_perbaikan', 'status_diperbarui', 'bukti_diunggah'];
+
       document.getElementById('statGrid').innerHTML = `
         <div class="stat-card">
           <div class="stat-icon primary">📝</div>
@@ -58,42 +60,51 @@
         </div>
         <div class="stat-card">
           <div class="stat-icon warning">⏳</div>
-          <div class="stat-info"><h3>${myReports.filter(l => ['terkirim','diverifikasi','didisposisi'].includes(l.status)).length}</h3><p>Menunggu Proses</p></div>
+          <div class="stat-info"><h3>${myReports.filter(report => waitingStatuses.includes(report.status)).length}</h3><p>Menunggu Proses</p></div>
         </div>
         <div class="stat-card">
           <div class="stat-icon violet">🔧</div>
-          <div class="stat-info"><h3>${myReports.filter(l => l.status === 'dalam_pengerjaan').length}</h3><p>Dalam Pengerjaan</p></div>
+          <div class="stat-info"><h3>${myReports.filter(report => workStatuses.includes(report.status)).length}</h3><p>Dalam Pengerjaan</p></div>
         </div>
         <div class="stat-card">
           <div class="stat-icon success">✅</div>
-          <div class="stat-info"><h3>${myReports.filter(l => l.status === 'selesai').length}</h3><p>Selesai</p></div>
+          <div class="stat-info"><h3>${myReports.filter(report => report.status === 'selesai').length}</h3><p>Selesai</p></div>
         </div>
       `;
 
-      // Recent reports
-      const sorted = [...myReports].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
+      const sorted = [...myReports]
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 5);
+
       if (sorted.length === 0) {
         document.getElementById('recentReports').innerHTML = `
-          <div class="empty-state"><div class="icon">📭</div><h3>Belum Ada Laporan</h3><p>Buat laporan pertama Anda!</p></div>
+          <div class="empty-state"><div class="icon">📭</div><h3>Belum Ada Laporan</h3><p>Buat laporan pertama Anda.</p></div>
         `;
       } else {
         document.getElementById('recentReports').innerHTML = `
-          <table class="data-table"><thead><tr><th>Judul</th><th>Status</th><th>Tanggal</th></tr></thead><tbody>
-          ${sorted.map(l => `<tr><td>${Utils.escapeHtml(Utils.truncate(l.judul, 35))}</td><td>${Utils.getStatusBadge(l.status)}</td><td style="color:var(--text-muted);font-size:var(--font-size-xs)">${Utils.formatDate(l.createdAt)}</td></tr>`).join('')}
-          </tbody></table>
+          <table class="data-table">
+            <thead><tr><th>Judul</th><th>Status</th><th>Tanggal</th></tr></thead>
+            <tbody>
+              ${sorted.map(report => `
+                <tr>
+                  <td><strong>${Utils.escapeHtml(Utils.truncate(Utils.getReportTitle(report), 35))}</strong></td>
+                  <td>${Utils.getStatusBadge(report.status)}</td>
+                  <td style="color:var(--text-muted);font-size:var(--font-size-xs)">${Utils.formatDate(report.createdAt)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
         `;
       }
 
-      // Activity
-      const activities = sorted.slice(0, 4);
-      document.getElementById('recentActivity').innerHTML = activities.length ? `
+      document.getElementById('recentActivity').innerHTML = sorted.length ? `
         <ul class="activity-list">
-          ${activities.map(l => `
+          ${sorted.slice(0, 4).map(report => `
             <li class="activity-item">
-              <div class="activity-dot" style="background:${l.status === 'selesai' ? 'var(--accent-emerald)' : 'var(--accent-primary)'}"></div>
+              <div class="activity-dot" style="background:${report.status === 'selesai' ? 'var(--accent-emerald)' : 'var(--accent-primary)'}"></div>
               <div class="activity-content">
-                <p><strong>${Utils.escapeHtml(Utils.truncate(l.judul, 40))}</strong> — ${Utils.getStatusLabel(l.status)}</p>
-                <div class="time">${Utils.formatTimeAgo(l.updatedAt || l.createdAt)}</div>
+                <p><strong>${Utils.escapeHtml(Utils.truncate(Utils.getReportTitle(report), 40))}</strong> — ${Utils.getStatusLabel(report.status)}</p>
+                <div class="time">${Utils.formatTimeAgo(report.updatedAt || report.createdAt)}</div>
               </div>
             </li>
           `).join('')}

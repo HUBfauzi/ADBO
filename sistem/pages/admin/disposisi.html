@@ -21,7 +21,7 @@
       <main class="page-content">
         <div class="page-header">
           <h1>📤 Disposisi Laporan</h1>
-          <p>Tugaskan laporan yang telah diverifikasi ke petugas lapangan.</p>
+          <p>Tugaskan laporan yang telah terverifikasi kepada petugas lapangan.</p>
         </div>
 
         <div class="table-wrapper">
@@ -33,7 +33,6 @@
           </table>
         </div>
 
-        <!-- Disposisi Modal -->
         <div class="modal-overlay" id="dispModal">
           <div class="modal">
             <div class="modal-header">
@@ -74,40 +73,41 @@
     });
 
     function loadTable() {
-      const verified = DB.filter('laporan', l => l.status === 'diverifikasi');
+      const verified = DB.filter('reports', report => report.status === 'terverifikasi')
+        .sort((a, b) => new Date(a.updatedAt || a.createdAt) - new Date(b.updatedAt || b.createdAt));
       const tbody = document.getElementById('tableBody');
 
       if (verified.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="icon">📭</div><h3>Tidak Ada Laporan</h3><p>Belum ada laporan yang siap didisposisi.</p></div></td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="icon">📭</div><h3>Tidak Ada Laporan</h3><p>Belum ada laporan yang siap didisposisikan.</p></div></td></tr>`;
         return;
       }
 
-      tbody.innerHTML = verified.map((l, i) => `
+      tbody.innerHTML = verified.map((report, i) => `
         <tr>
           <td>${i + 1}</td>
-          <td><strong>${Utils.escapeHtml(Utils.truncate(l.judul, 30))}</strong></td>
-          <td>${Utils.getUserName(l.userId)}</td>
-          <td>${Utils.getCategoryIcon(l.kategoriId)} ${Utils.getCategoryName(l.kategoriId)}</td>
-          <td>${Utils.escapeHtml(Utils.truncate(l.lokasi, 22))}</td>
-          <td><button class="btn btn-primary btn-sm" onclick="openDisposisi('${l.id}')">📤 Disposisi</button></td>
+          <td><strong>${Utils.escapeHtml(Utils.truncate(Utils.getReportTitle(report), 32))}</strong></td>
+          <td>${Utils.getUserName(report.userId)}</td>
+          <td>${Utils.getCategoryIcon(report.categoryId)} ${Utils.getCategoryName(report.categoryId)}</td>
+          <td>${Utils.escapeHtml(Utils.truncate(Utils.getReportLocation(report), 26))}</td>
+          <td><button class="btn btn-primary btn-sm" onclick="openDisposisi('${report.id}')">📤 Disposisi</button></td>
         </tr>
       `).join('');
     }
 
     function openDisposisi(id) {
       currentId = id;
-      const l = DB.getById('laporan', id);
+      const report = DB.getById('reports', id);
       document.getElementById('dispDetail').innerHTML = `
-        <div class="detail-item"><div class="label">Judul</div><div class="value">${Utils.escapeHtml(l.judul)}</div></div>
-        <div class="detail-item"><div class="label">Lokasi</div><div class="value">${Utils.escapeHtml(l.lokasi)}</div></div>
+        <div class="detail-item"><div class="label">Judul</div><div class="value">${Utils.escapeHtml(Utils.getReportTitle(report))}</div></div>
+        <div class="detail-item"><div class="label">Pelapor</div><div class="value">${Utils.getUserName(report.userId)}</div></div>
+        <div class="detail-item"><div class="label">Lokasi</div><div class="value">${Utils.escapeHtml(Utils.getReportLocation(report))}</div></div>
       `;
 
-      // Load petugas
-      const petugas = DB.filter('users', u => u.role === 'petugas');
+      const petugas = DB.filter('users', user => user.role === 'petugas');
       const select = document.getElementById('petugasSelect');
       select.innerHTML = '<option value="">— Pilih Petugas —</option>';
-      petugas.forEach(p => {
-        select.innerHTML += `<option value="${p.id}">🔧 ${p.nama}</option>`;
+      petugas.forEach(user => {
+        select.innerHTML += `<option value="${user.id}">🔧 ${Utils.escapeHtml(user.name || user.nama)}</option>`;
       });
 
       document.getElementById('dispModal').classList.add('show');
@@ -115,20 +115,33 @@
 
     function doDisposisi() {
       const petugasId = document.getElementById('petugasSelect').value;
-      if (!petugasId) { Utils.showToast('Pilih petugas terlebih dahulu.', 'error'); return; }
+      if (!petugasId) {
+        Utils.showToast('Pilih petugas terlebih dahulu.', 'error');
+        return;
+      }
+
+      const admin = Auth.getCurrentUser();
       const catatan = document.getElementById('catatanDisp').value.trim();
-      DB.update('laporan', currentId, {
-        status: 'didisposisi',
-        petugasId: petugasId,
-        catatanAdmin: (DB.getById('laporan', currentId).catatanAdmin || '') + (catatan ? '\nDisposisi: ' + catatan : '')
+      DB.createAssignment(currentId, petugasId, admin.id, catatan || 'Tugas perbaikan didisposisikan ke petugas.');
+      DB.updateReportStatus(currentId, 'didisposisikan', {
+        petugasId,
+        officerId: petugasId,
+        adminNote: catatan || 'Laporan didisposisikan ke petugas lapangan.',
+        statusNote: 'Admin mendisposisikan laporan ke petugas.'
       });
+
       closeModal();
       loadTable();
-      Utils.showToast('Laporan berhasil didisposisi ke petugas.', 'success');
+      Utils.showToast('Laporan berhasil didisposisikan ke petugas.', 'success');
     }
 
-    function closeModal() { document.getElementById('dispModal').classList.remove('show'); }
-    document.getElementById('dispModal').addEventListener('click', e => { if (e.target.classList.contains('modal-overlay')) closeModal(); });
+    function closeModal() {
+      document.getElementById('dispModal').classList.remove('show');
+    }
+
+    document.getElementById('dispModal').addEventListener('click', e => {
+      if (e.target.classList.contains('modal-overlay')) closeModal();
+    });
   </script>
 </body>
 </html>

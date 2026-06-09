@@ -54,7 +54,7 @@
                 <label class="form-label">Upload Foto Kerusakan</label>
                 <div class="file-upload" id="fileUpload" onclick="document.getElementById('fotoInput').click()">
                   <div class="icon">📷</div>
-                  <p>Klik untuk memilih foto atau drag & drop</p>
+                  <p>Klik untuk memilih foto kerusakan</p>
                   <p style="font-size:11px;color:var(--text-muted);margin-top:4px;">Format: JPG, PNG (maks 2MB)</p>
                 </div>
                 <input type="file" id="fotoInput" accept="image/*" style="display:none" onchange="previewFoto(this)" />
@@ -63,7 +63,7 @@
 
               <div id="formError" class="form-error" style="display:none;margin-bottom:12px;"></div>
 
-              <div style="display:flex;gap:12px;margin-top:24px;">
+              <div style="display:flex;gap:12px;margin-top:24px;flex-wrap:wrap;">
                 <button type="submit" class="btn btn-primary btn-lg">📤 Kirim Laporan</button>
                 <a href="dashboard.html" class="btn btn-outline btn-lg">Batal</a>
               </div>
@@ -84,13 +84,12 @@
     document.addEventListener('DOMContentLoaded', () => {
       if (!App.init('Buat Laporan', ['masyarakat'])) return;
 
-      // Load categories
-      const kategori = DB.getAll('kategori');
+      const categories = DB.getAll('categories');
       const select = document.getElementById('kategori');
-      kategori.forEach(k => {
+      categories.forEach(category => {
         const opt = document.createElement('option');
-        opt.value = k.id;
-        opt.textContent = k.icon + ' ' + k.nama;
+        opt.value = category.id;
+        opt.textContent = `${category.icon || '📋'} ${category.name || category.nama}`;
         select.appendChild(opt);
       });
     });
@@ -98,16 +97,19 @@
     function previewFoto(input) {
       const file = input.files[0];
       if (!file) return;
+
       if (file.size > 2 * 1024 * 1024) {
         Utils.showToast('Ukuran file melebihi 2MB.', 'error');
+        input.value = '';
         return;
       }
+
       const reader = new FileReader();
-      reader.onload = (e) => {
-        fotoBase64 = e.target.result;
-        document.getElementById('fotoPreview').innerHTML = `<img src="${fotoBase64}" alt="Preview" />`;
+      reader.onload = event => {
+        fotoBase64 = event.target.result;
+        document.getElementById('fotoPreview').innerHTML = `<img src="${fotoBase64}" alt="Preview foto kerusakan" />`;
         document.getElementById('fotoPreview').style.display = 'block';
-        document.getElementById('fileUpload').innerHTML = `<div class="icon">✅</div><p class="file-name">${file.name}</p><p style="font-size:11px;color:var(--text-muted);">Klik untuk ganti foto</p>`;
+        document.getElementById('fileUpload').innerHTML = `<div class="icon">✅</div><p class="file-name">${Utils.escapeHtml(file.name)}</p><p style="font-size:11px;color:var(--text-muted);">Klik untuk ganti foto</p>`;
       };
       reader.readAsDataURL(file);
     }
@@ -115,26 +117,33 @@
     function handleSubmit(e) {
       e.preventDefault();
       const user = Auth.getCurrentUser();
+      const now = new Date().toISOString();
 
-      const laporan = {
+      const report = DB.insert('reports', {
         userId: user.id,
-        judul: document.getElementById('judul').value.trim(),
-        deskripsi: document.getElementById('deskripsi').value.trim(),
-        kategoriId: document.getElementById('kategori').value,
-        lokasi: document.getElementById('lokasi').value.trim(),
-        foto: fotoBase64,
-        status: 'terkirim',
+        masyarakatId: user.id,
+        title: document.getElementById('judul').value.trim(),
+        description: document.getElementById('deskripsi').value.trim(),
+        categoryId: document.getElementById('kategori').value,
+        location: document.getElementById('lokasi').value.trim(),
+        damagePhoto: fotoBase64,
+        status: 'menunggu_verifikasi',
         petugasId: null,
-        fotoBukti: null,
-        catatanAdmin: null,
-        catatanPetugas: null
-      };
+        repairPhoto: null,
+        adminNote: '',
+        officerNote: '',
+        submittedAt: now,
+        createdAt: now,
+        statusHistory: [
+          { status: 'diajukan', at: now, by: user.id, note: 'Laporan dibuat oleh masyarakat.' },
+          { status: 'menunggu_verifikasi', at: now, by: null, note: 'Laporan masuk ke sistem dan menunggu verifikasi admin.' }
+        ]
+      });
 
-      DB.insert('laporan', laporan);
-      Utils.showToast('Laporan berhasil dikirim!', 'success');
+      Utils.showToast(`Laporan ${report.id} berhasil dikirim.`, 'success');
       setTimeout(() => {
         window.location.href = 'status-laporan.html';
-      }, 1000);
+      }, 900);
       return false;
     }
   </script>

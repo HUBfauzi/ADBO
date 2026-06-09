@@ -1,9 +1,8 @@
-// ═══════════════════════════════════════════════════════════
-// UTILS.JS — Helper Functions
-// ═══════════════════════════════════════════════════════════
+// ==========================================================
+// UTILS.JS - Helper tampilan, status, dan data lookup
+// ==========================================================
 
 const Utils = {
-  // Format date to Indonesian locale
   formatDate(dateStr) {
     if (!dateStr) return '-';
     const d = new Date(dateStr);
@@ -14,8 +13,11 @@ const Utils = {
     if (!dateStr) return '-';
     const d = new Date(dateStr);
     return d.toLocaleDateString('id-ID', {
-      day: 'numeric', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit'
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     });
   },
 
@@ -29,53 +31,87 @@ const Utils = {
     if (diff < 3600) return Math.floor(diff / 60) + ' menit lalu';
     if (diff < 86400) return Math.floor(diff / 3600) + ' jam lalu';
     if (diff < 604800) return Math.floor(diff / 86400) + ' hari lalu';
-    return Utils.formatDate(dateStr);
+    return this.formatDate(dateStr);
   },
 
-  // Status helpers
   getStatusLabel(status) {
     const labels = {
-      draft: 'Draft',
-      terkirim: 'Terkirim',
-      diverifikasi: 'Diverifikasi',
-      didisposisi: 'Didisposisi',
-      dalam_pengerjaan: 'Dalam Pengerjaan',
+      diajukan: 'Diajukan',
+      menunggu_verifikasi: 'Menunggu Verifikasi',
+      perlu_perbaikan_data: 'Perlu Perbaikan Data',
+      ditolak: 'Ditolak',
+      terverifikasi: 'Terverifikasi',
+      didisposisikan: 'Didisposisikan',
+      menunggu_diproses: 'Menunggu Diproses',
+      dalam_perbaikan: 'Dalam Perbaikan',
+      status_diperbarui: 'Status Diperbarui',
+      bukti_diunggah: 'Bukti Diunggah',
       selesai: 'Selesai',
-      ditolak: 'Ditolak'
+
+      // Kompatibilitas status lama
+      draft: 'Draft',
+      terkirim: 'Menunggu Verifikasi',
+      diverifikasi: 'Terverifikasi',
+      didisposisi: 'Didisposisikan',
+      dalam_pengerjaan: 'Dalam Perbaikan'
     };
-    return labels[status] || status;
+    return labels[status] || status || '-';
   },
 
   getStatusBadge(status) {
-    const cssClass = 'badge-' + status.replace('_', '-');
-    const label = this.getStatusLabel(status);
-    return `<span class="badge ${cssClass}"><span class="dot"></span>${label}</span>`;
+    const normalized = DB.normalizeStatus ? DB.normalizeStatus(status) : status;
+    const cssClass = 'badge-' + normalized.replaceAll('_', '-');
+    return `<span class="badge ${cssClass}"><span class="dot"></span>${this.getStatusLabel(normalized)}</span>`;
   },
 
-  // Get category name by ID
-  getCategoryName(katId) {
-    const kat = DB.getById('kategori', katId);
-    return kat ? kat.nama : '-';
+  getStatusOptions() {
+    return DB.STATUSES.map(status => ({ value: status, label: this.getStatusLabel(status) }));
   },
 
-  getCategoryIcon(katId) {
-    const kat = DB.getById('kategori', katId);
-    return kat ? kat.icon : '📋';
+  getCategoryName(categoryId) {
+    const category = DB.getById('categories', categoryId);
+    return category ? (category.name || category.nama) : '-';
   },
 
-  // Get user name by ID
+  getCategoryIcon(categoryId) {
+    const category = DB.getById('categories', categoryId);
+    return category ? category.icon : '📋';
+  },
+
   getUserName(userId) {
     const user = DB.getById('users', userId);
-    return user ? user.nama : '-';
+    return user ? (user.name || user.nama) : '-';
   },
 
-  // Generate initials from name
+  getReportTitle(report) {
+    return report ? (report.title || report.judul || '-') : '-';
+  },
+
+  getReportDescription(report) {
+    return report ? (report.description || report.deskripsi || '') : '';
+  },
+
+  getReportLocation(report) {
+    return report ? (report.location || report.lokasi || '') : '';
+  },
+
+  getReportCategoryId(report) {
+    return report ? (report.categoryId || report.kategoriId || '') : '';
+  },
+
+  getReportPhoto(report) {
+    return report ? (report.damagePhoto || report.foto || null) : null;
+  },
+
+  getRepairPhoto(report) {
+    return report ? (report.repairPhoto || report.fotoBukti || null) : null;
+  },
+
   getInitials(name) {
     if (!name) return '?';
-    return name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+    return name.split(' ').map(word => word[0]).join('').substring(0, 2).toUpperCase();
   },
 
-  // Toast notification
   showToast(message, type = 'info') {
     let container = document.getElementById('toastContainer');
     if (!container) {
@@ -99,27 +135,23 @@ const Utils = {
     }, 3000);
   },
 
-  // Truncate text
   truncate(text, maxLen = 60) {
     if (!text) return '';
     return text.length > maxLen ? text.substring(0, maxLen) + '...' : text;
   },
 
-  // Query params
   getParam(key) {
     const params = new URLSearchParams(window.location.search);
     return params.get(key);
   },
 
-  // Escape HTML
   escapeHtml(str) {
-    if (!str) return '';
+    if (str === null || str === undefined) return '';
     const div = document.createElement('div');
-    div.textContent = str;
+    div.textContent = String(str);
     return div.innerHTML;
   },
 
-  // Debounce
   debounce(fn, delay = 300) {
     let timer;
     return (...args) => {

@@ -1,28 +1,48 @@
-// ═══════════════════════════════════════════════════════════
-// AUTH.JS — Authentication & Session Management
-// ═══════════════════════════════════════════════════════════
+// ==========================================================
+// AUTH.JS - Authentication & session berbasis LocalStorage
+// ==========================================================
 
 const Auth = {
   login(email, password) {
+    const normalizedEmail = (email || '').trim().toLowerCase();
     const users = DB.getAll('users');
-    const user = users.find(u => u.email === email && u.password === password);
-    if (user) {
-      const session = { ...user };
-      delete session.password;
-      sessionStorage.setItem('currentUser', JSON.stringify(session));
-      return { success: true, user: session };
+    const user = users.find(item => item.email === normalizedEmail && item.password === password);
+
+    if (!user) {
+      return { success: false, message: 'Email atau password salah.' };
     }
-    return { success: false, message: 'Email atau password salah.' };
+
+    const session = DB.setSession(user);
+    return { success: true, user: this.sanitizeUser({ ...user, ...session }) };
   },
 
   logout() {
-    sessionStorage.removeItem('currentUser');
+    DB.clearSession();
     window.location.href = this.getBasePath() + 'index.html';
   },
 
   getCurrentUser() {
-    const data = sessionStorage.getItem('currentUser');
-    return data ? JSON.parse(data) : null;
+    const session = DB.getSession();
+    if (!session) return null;
+
+    const user = DB.getById('users', session.userId);
+    if (!user) {
+      DB.clearSession();
+      return null;
+    }
+
+    return this.sanitizeUser(user);
+  },
+
+  sanitizeUser(user) {
+    if (!user) return null;
+    const cleaned = {
+      ...user,
+      name: user.name || user.nama,
+      nama: user.name || user.nama
+    };
+    delete cleaned.password;
+    return cleaned;
   },
 
   isLoggedIn() {
@@ -70,29 +90,32 @@ const Auth = {
 
   getBasePath() {
     const path = window.location.pathname;
-    if (path.includes('/pages/')) {
-      return '../../';
-    }
+    if (path.includes('/pages/')) return '../../';
     return '';
   },
 
   register(data) {
     const users = DB.getAll('users');
-    if (users.find(u => u.email === data.email)) {
+    const email = (data.email || '').trim().toLowerCase();
+
+    if (users.find(user => user.email === email)) {
       return { success: false, message: 'Email sudah terdaftar.' };
     }
-    const newUser = {
-      id: DB.generateId(),
-      nama: data.nama,
-      email: data.email,
+
+    const newUser = DB.insert('users', {
+      name: data.name || data.nama,
+      nama: data.name || data.nama,
+      email,
       password: data.password,
-      role: 'masyarakat',
+      role: data.role || 'masyarakat',
       nik: data.nik || '',
-      alamat: data.alamat || '',
-      telepon: data.telepon || '',
+      address: data.address || data.alamat || '',
+      alamat: data.address || data.alamat || '',
+      phone: data.phone || data.telepon || '',
+      telepon: data.phone || data.telepon || '',
       createdAt: new Date().toISOString()
-    };
-    DB.insert('users', newUser);
-    return { success: true, user: newUser };
+    });
+
+    return { success: true, user: this.sanitizeUser(newUser) };
   }
 };

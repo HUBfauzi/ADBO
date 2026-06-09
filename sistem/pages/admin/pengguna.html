@@ -21,7 +21,7 @@
       <main class="page-content">
         <div class="page-header">
           <h1>👥 Kelola Data Pengguna</h1>
-          <p>Lihat dan kelola semua akun pengguna sistem.</p>
+          <p>Lihat semua akun pengguna yang tersimpan di LocalStorage.</p>
         </div>
 
         <div class="toolbar">
@@ -57,7 +57,7 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       if (!App.init('Data Pengguna', ['admin'])) return;
-      allUsers = DB.getAll('users');
+      allUsers = DB.getAll('users').sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       renderTable(allUsers);
     });
 
@@ -65,39 +65,66 @@
       const search = document.getElementById('searchInput').value.toLowerCase();
       const role = document.getElementById('filterRole').value;
       let filtered = allUsers;
-      if (search) filtered = filtered.filter(u => u.nama.toLowerCase().includes(search) || u.email.toLowerCase().includes(search));
-      if (role) filtered = filtered.filter(u => u.role === role);
+
+      if (search) {
+        filtered = filtered.filter(user => {
+          const name = (user.name || user.nama || '').toLowerCase();
+          return name.includes(search) || user.email.toLowerCase().includes(search);
+        });
+      }
+      if (role) filtered = filtered.filter(user => user.role === role);
       renderTable(filtered);
     }
 
     function renderTable(data) {
-      const roleColors = { masyarakat: 'tag-actor', admin: 'tag-usecase', petugas: 'tag-object', kepala_dinas: 'tag-state' };
-      document.getElementById('tableBody').innerHTML = data.map((u, i) => `
-        <tr>
-          <td>${i + 1}</td>
-          <td><div style="display:flex;align-items:center;gap:10px;">
-            <div style="width:32px;height:32px;border-radius:50%;background:var(--gradient-primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;">${Utils.getInitials(u.nama)}</div>
-            <strong>${Utils.escapeHtml(u.nama)}</strong>
-          </div></td>
-          <td style="color:var(--text-muted)">${u.email}</td>
-          <td><span class="badge ${roleColors[u.role] || ''}" style="background:var(--accent-primary-light);color:var(--accent-primary);">${Auth.getRoleName(u.role)}</span></td>
-          <td style="color:var(--text-muted);font-size:var(--font-size-xs)">${u.nik || '-'}</td>
-          <td style="color:var(--text-muted);font-size:var(--font-size-xs)">${Utils.formatDate(u.createdAt)}</td>
-          <td>
-            <div class="action-btns">
-              <button class="action-btn delete" title="Hapus" onclick="deleteUser('${u.id}')">🗑️</button>
-            </div>
-          </td>
-        </tr>
-      `).join('');
+      const roleColors = {
+        masyarakat: 'badge-menunggu-verifikasi',
+        admin: 'badge-terverifikasi',
+        petugas: 'badge-didisposisikan',
+        kepala_dinas: 'badge-selesai'
+      };
+      const tbody = document.getElementById('tableBody');
+
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="icon">👥</div><h3>Tidak Ada Pengguna</h3></div></td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = data.map((user, i) => {
+        const name = user.name || user.nama;
+        return `
+          <tr>
+            <td>${i + 1}</td>
+            <td>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div style="width:32px;height:32px;border-radius:50%;background:var(--gradient-primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;">${Utils.getInitials(name)}</div>
+                <strong>${Utils.escapeHtml(name)}</strong>
+              </div>
+            </td>
+            <td style="color:var(--text-muted)">${Utils.escapeHtml(user.email)}</td>
+            <td><span class="badge ${roleColors[user.role] || 'badge-diajukan'}">${Auth.getRoleName(user.role)}</span></td>
+            <td style="color:var(--text-muted);font-size:var(--font-size-xs)">${Utils.escapeHtml(user.nik || '-')}</td>
+            <td style="color:var(--text-muted);font-size:var(--font-size-xs)">${Utils.formatDate(user.createdAt)}</td>
+            <td>
+              <div class="action-btns">
+                <button class="action-btn delete" title="Hapus" onclick="deleteUser('${user.id}')">🗑️</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
     }
 
     function deleteUser(id) {
       const current = Auth.getCurrentUser();
-      if (id === current.id) { Utils.showToast('Tidak bisa menghapus akun sendiri.', 'error'); return; }
+      if (id === current.id) {
+        Utils.showToast('Tidak bisa menghapus akun sendiri.', 'error');
+        return;
+      }
+
       if (confirm('Yakin ingin menghapus pengguna ini?')) {
         DB.delete('users', id);
-        allUsers = DB.getAll('users');
+        allUsers = DB.getAll('users').sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         renderTable(allUsers);
         Utils.showToast('Pengguna dihapus.', 'warning');
       }

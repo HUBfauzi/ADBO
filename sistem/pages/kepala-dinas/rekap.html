@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rekap Laporan — Kepala Dinas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../css/variables.css" />
+  <link rel="stylesheet" href="../../css/main.css" />
+  <link rel="stylesheet" href="../../css/pages.css" />
+  <link rel="stylesheet" href="../../css/responsive.css" />
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="App.toggleSidebar()"></div>
+    <div class="main-area">
+      <header class="topbar" id="topbar"></header>
+      <main class="page-content">
+        <div class="page-header">
+          <h1>📑 Rekap Laporan</h1>
+          <p>Rekap seluruh laporan kerusakan fasilitas umum untuk dipantau dan dicetak.</p>
+        </div>
+
+        <div class="toolbar">
+          <div class="toolbar-search">
+            <span class="icon">🔍</span>
+            <input type="text" id="searchInput" placeholder="Cari laporan..." oninput="filterTable()" />
+          </div>
+          <div class="toolbar-actions">
+            <select class="form-select" id="filterStatus" onchange="filterTable()" style="width:220px;padding:9px 14px;">
+              <option value="">Semua Status</option>
+            </select>
+            <button class="btn btn-primary btn-sm" onclick="window.print()">🖨️ Cetak Laporan</button>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-body" id="rekapInfo"></div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr><th>No</th><th>Judul</th><th>Pelapor</th><th>Kategori</th><th>Lokasi</th><th>Petugas</th><th>Status</th><th>Tanggal</th></tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="../../js/db.js"></script>
+  <script src="../../js/auth.js"></script>
+  <script src="../../js/utils.js"></script>
+  <script src="../../js/app.js"></script>
+  <script>
+    let allReports = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!App.init('Rekap Laporan', ['kepala_dinas'])) return;
+      renderStatusFilter();
+      allReports = DB.getAll('reports').sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      renderTable(allReports);
+    });
+
+    function renderStatusFilter() {
+      const select = document.getElementById('filterStatus');
+      DB.STATUSES.forEach(status => {
+        select.innerHTML += `<option value="${status}">${Utils.getStatusLabel(status)}</option>`;
+      });
+    }
+
+    function filterTable() {
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const status = document.getElementById('filterStatus').value;
+      let filtered = allReports;
+
+      if (search) {
+        filtered = filtered.filter(report => {
+          const haystack = [
+            Utils.getReportTitle(report),
+            Utils.getReportLocation(report),
+            Utils.getUserName(report.userId),
+            Utils.getCategoryName(report.categoryId),
+            Utils.getUserName(report.petugasId)
+          ].join(' ').toLowerCase();
+          return haystack.includes(search);
+        });
+      }
+      if (status) filtered = filtered.filter(report => report.status === status);
+      renderTable(filtered);
+    }
+
+    function renderTable(data) {
+      document.getElementById('rekapInfo').innerHTML = `
+        <div class="detail-grid">
+          <div class="detail-item"><div class="label">Total Ditampilkan</div><div class="value">${data.length} laporan</div></div>
+          <div class="detail-item"><div class="label">Laporan Selesai</div><div class="value">${data.filter(report => report.status === 'selesai').length} laporan</div></div>
+          <div class="detail-item"><div class="label">Belum Selesai</div><div class="value">${data.filter(report => report.status !== 'selesai' && report.status !== 'ditolak').length} laporan</div></div>
+        </div>
+      `;
+
+      const tbody = document.getElementById('tableBody');
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="icon">📭</div><h3>Tidak Ada Data</h3></div></td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = data.map((report, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td><strong>${Utils.escapeHtml(Utils.truncate(Utils.getReportTitle(report), 30))}</strong></td>
+          <td>${Utils.getUserName(report.userId)}</td>
+          <td>${Utils.getCategoryIcon(report.categoryId)} ${Utils.getCategoryName(report.categoryId)}</td>
+          <td>${Utils.escapeHtml(Utils.truncate(Utils.getReportLocation(report), 24))}</td>
+          <td>${report.petugasId ? Utils.getUserName(report.petugasId) : '-'}</td>
+          <td>${Utils.getStatusBadge(report.status)}</td>
+          <td style="color:var(--text-muted);font-size:var(--font-size-xs)">${Utils.formatDate(report.createdAt)}</td>
+        </tr>
+      `).join('');
+    }
+  </script>
+</body>
+</html>

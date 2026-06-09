@@ -36,7 +36,6 @@
           </table>
         </div>
 
-        <!-- Modal -->
         <div class="modal-overlay" id="kategoriModal">
           <div class="modal">
             <div class="modal-header">
@@ -80,23 +79,33 @@
     });
 
     function loadTable() {
-      const kategori = DB.getAll('kategori');
-      const laporan = DB.getAll('laporan');
-      document.getElementById('tableBody').innerHTML = kategori.map((k, i) => `
-        <tr>
-          <td>${i + 1}</td>
-          <td style="font-size:24px;">${k.icon || '📋'}</td>
-          <td><strong>${Utils.escapeHtml(k.nama)}</strong></td>
-          <td style="color:var(--text-muted)">${Utils.escapeHtml(Utils.truncate(k.deskripsi, 40))}</td>
-          <td><span class="badge badge-terkirim">${laporan.filter(l => l.kategoriId === k.id).length} laporan</span></td>
-          <td>
-            <div class="action-btns">
-              <button class="action-btn edit" onclick="openEdit('${k.id}')">✏️</button>
-              <button class="action-btn delete" onclick="deleteKat('${k.id}')">🗑️</button>
-            </div>
-          </td>
-        </tr>
-      `).join('');
+      const categories = DB.getAll('categories');
+      const reports = DB.getAll('reports');
+      const tbody = document.getElementById('tableBody');
+
+      if (categories.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="icon">🏷️</div><h3>Belum Ada Kategori</h3></div></td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = categories.map((category, i) => {
+        const count = reports.filter(report => report.categoryId === category.id).length;
+        return `
+          <tr>
+            <td>${i + 1}</td>
+            <td style="font-size:24px;">${category.icon || '📋'}</td>
+            <td><strong>${Utils.escapeHtml(category.name || category.nama)}</strong></td>
+            <td style="color:var(--text-muted)">${Utils.escapeHtml(Utils.truncate(category.description || category.deskripsi, 44))}</td>
+            <td><span class="badge badge-menunggu-verifikasi">${count} laporan</span></td>
+            <td>
+              <div class="action-btns">
+                <button class="action-btn edit" title="Edit" onclick="openEdit('${category.id}')">✏️</button>
+                <button class="action-btn delete" title="Hapus" onclick="deleteKategori('${category.id}')">🗑️</button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
     }
 
     function openAdd() {
@@ -110,43 +119,61 @@
 
     function openEdit(id) {
       editId = id;
-      const k = DB.getById('kategori', id);
+      const category = DB.getById('categories', id);
       document.getElementById('modalTitle').textContent = 'Edit Kategori';
-      document.getElementById('katNama').value = k.nama;
-      document.getElementById('katIcon').value = k.icon || '';
-      document.getElementById('katDesc').value = k.deskripsi || '';
+      document.getElementById('katNama').value = category.name || category.nama;
+      document.getElementById('katIcon').value = category.icon || '';
+      document.getElementById('katDesc').value = category.description || category.deskripsi || '';
       document.getElementById('kategoriModal').classList.add('show');
     }
 
     function saveKategori() {
-      const nama = document.getElementById('katNama').value.trim();
-      if (!nama) { Utils.showToast('Nama kategori wajib diisi.', 'error'); return; }
+      const name = document.getElementById('katNama').value.trim();
+      if (!name) {
+        Utils.showToast('Nama kategori wajib diisi.', 'error');
+        return;
+      }
+
       const data = {
-        nama: nama,
+        name,
+        nama: name,
         icon: document.getElementById('katIcon').value.trim() || '📋',
+        description: document.getElementById('katDesc').value.trim(),
         deskripsi: document.getElementById('katDesc').value.trim()
       };
+
       if (editId) {
-        DB.update('kategori', editId, data);
+        DB.update('categories', editId, data);
         Utils.showToast('Kategori berhasil diperbarui.', 'success');
       } else {
-        DB.insert('kategori', data);
+        DB.insert('categories', data);
         Utils.showToast('Kategori berhasil ditambahkan.', 'success');
       }
+
       closeModal();
       loadTable();
     }
 
-    function deleteKat(id) {
-      if (confirm('Yakin ingin menghapus kategori ini?')) {
-        DB.delete('kategori', id);
+    function deleteKategori(id) {
+      const used = DB.count('reports', report => report.categoryId === id);
+      const message = used > 0
+        ? `Kategori ini dipakai oleh ${used} laporan. Tetap hapus?`
+        : 'Yakin ingin menghapus kategori ini?';
+
+      if (confirm(message)) {
+        DB.delete('categories', id);
         loadTable();
         Utils.showToast('Kategori dihapus.', 'warning');
       }
     }
 
-    function closeModal() { document.getElementById('kategoriModal').classList.remove('show'); }
-    document.getElementById('kategoriModal').addEventListener('click', e => { if (e.target.classList.contains('modal-overlay')) closeModal(); });
+    function closeModal() {
+      document.getElementById('kategoriModal').classList.remove('show');
+    }
+
+    document.getElementById('kategoriModal').addEventListener('click', e => {
+      if (e.target.classList.contains('modal-overlay')) closeModal();
+    });
   </script>
 </body>
 </html>

@@ -1,6 +1,6 @@
-// ═══════════════════════════════════════════════════════════
-// APP.JS — App Shell: Sidebar, Topbar, Page Init
-// ═══════════════════════════════════════════════════════════
+// ==========================================================
+// APP.JS - App shell: sidebar, topbar, page init
+// ==========================================================
 
 const App = {
   init(pageTitle, allowedRoles) {
@@ -17,7 +17,6 @@ const App = {
 
     const base = Auth.getBasePath();
     const role = user.role;
-
     let navItems = '';
 
     if (role === 'masyarakat') {
@@ -28,31 +27,30 @@ const App = {
         <a href="${base}pages/masyarakat/status-laporan.html" class="nav-item" data-page="status-laporan"><span class="icon">📋</span> Status Laporan</a>
       `;
     } else if (role === 'admin') {
-      const pendingCount = DB.count('laporan', l => l.status === 'terkirim');
-      const verifCount = DB.count('laporan', l => l.status === 'diverifikasi');
+      const pendingCount = DB.count('reports', report => ['diajukan', 'menunggu_verifikasi'].includes(report.status));
+      const verifiedCount = DB.count('reports', report => report.status === 'terverifikasi');
       navItems = `
         <div class="nav-section-label">Menu Utama</div>
         <a href="${base}pages/admin/dashboard.html" class="nav-item" data-page="dashboard"><span class="icon">📊</span> Dashboard</a>
         <a href="${base}pages/admin/verifikasi.html" class="nav-item" data-page="verifikasi"><span class="icon">✅</span> Verifikasi Laporan ${pendingCount > 0 ? `<span class="badge-count">${pendingCount}</span>` : ''}</a>
-        <a href="${base}pages/admin/disposisi.html" class="nav-item" data-page="disposisi"><span class="icon">📤</span> Disposisi Laporan ${verifCount > 0 ? `<span class="badge-count">${verifCount}</span>` : ''}</a>
+        <a href="${base}pages/admin/disposisi.html" class="nav-item" data-page="disposisi"><span class="icon">📤</span> Disposisi Laporan ${verifiedCount > 0 ? `<span class="badge-count">${verifiedCount}</span>` : ''}</a>
         <div class="nav-section-label">Kelola Data</div>
         <a href="${base}pages/admin/kategori.html" class="nav-item" data-page="kategori"><span class="icon">🏷️</span> Kategori Kerusakan</a>
         <a href="${base}pages/admin/pengguna.html" class="nav-item" data-page="pengguna"><span class="icon">👥</span> Data Pengguna</a>
       `;
     } else if (role === 'petugas') {
-      const taskCount = DB.count('laporan', l => (l.status === 'didisposisi' || l.status === 'dalam_pengerjaan') && l.petugasId === user.id);
+      const activeStatuses = ['didisposisikan', 'menunggu_diproses', 'dalam_perbaikan', 'status_diperbarui', 'bukti_diunggah'];
+      const taskCount = DB.count('reports', report => activeStatuses.includes(report.status) && report.petugasId === user.id);
       navItems = `
         <div class="nav-section-label">Menu Utama</div>
         <a href="${base}pages/petugas/dashboard.html" class="nav-item" data-page="dashboard"><span class="icon">📊</span> Dashboard</a>
         <a href="${base}pages/petugas/tugas.html" class="nav-item" data-page="tugas"><span class="icon">🔧</span> Daftar Tugas ${taskCount > 0 ? `<span class="badge-count">${taskCount}</span>` : ''}</a>
-        <a href="${base}pages/petugas/proses.html" class="nav-item" data-page="proses"><span class="icon">⚙️</span> Proses Perbaikan</a>
       `;
     } else if (role === 'kepala_dinas') {
       navItems = `
         <div class="nav-section-label">Menu Utama</div>
         <a href="${base}pages/kepala-dinas/dashboard.html" class="nav-item" data-page="dashboard"><span class="icon">📊</span> Dashboard</a>
         <a href="${base}pages/kepala-dinas/rekap.html" class="nav-item" data-page="rekap"><span class="icon">📑</span> Rekap Laporan</a>
-        <a href="${base}pages/kepala-dinas/cetak.html" class="nav-item" data-page="cetak"><span class="icon">🖨️</span> Cetak Laporan</a>
       `;
     }
 
@@ -69,21 +67,18 @@ const App = {
       </nav>
       <div class="sidebar-footer">
         <div class="sidebar-user">
-          <div class="avatar">${Utils.getInitials(user.nama)}</div>
+          <div class="avatar">${Utils.getInitials(user.name || user.nama)}</div>
           <div class="user-info">
-            <div class="user-name">${Utils.escapeHtml(user.nama)}</div>
+            <div class="user-name">${Utils.escapeHtml(user.name || user.nama)}</div>
             <div class="user-role">${Auth.getRoleName(user.role)}</div>
           </div>
         </div>
       </div>
     `;
 
-    // Highlight active nav item
     const currentPage = window.location.pathname.split('/').pop().replace('.html', '');
     sidebar.querySelectorAll('.nav-item').forEach(item => {
-      if (item.dataset.page === currentPage) {
-        item.classList.add('active');
-      }
+      if (item.dataset.page === currentPage) item.classList.add('active');
     });
   },
 
@@ -114,6 +109,7 @@ const App = {
   toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('sidebarOverlay');
+    if (!sidebar) return;
     sidebar.classList.toggle('open');
     if (overlay) overlay.classList.toggle('show');
   }

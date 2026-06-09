@@ -39,30 +39,38 @@
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       if (!App.init('Dashboard', ['petugas'])) return;
+
       const user = Auth.getCurrentUser();
-      const myTasks = DB.filter('laporan', l => l.petugasId === user.id);
+      const myTasks = DB.filter('reports', report => report.petugasId === user.id);
+      const waiting = ['didisposisikan', 'menunggu_diproses'];
+      const progress = ['dalam_perbaikan', 'status_diperbarui', 'bukti_diunggah'];
 
       document.getElementById('statGrid').innerHTML = `
         <div class="stat-card"><div class="stat-icon primary">📋</div><div class="stat-info"><h3>${myTasks.length}</h3><p>Total Tugas</p></div></div>
-        <div class="stat-card"><div class="stat-icon warning">📩</div><div class="stat-info"><h3>${myTasks.filter(l => l.status === 'didisposisi').length}</h3><p>Menunggu Dikerjakan</p></div></div>
-        <div class="stat-card"><div class="stat-icon violet">⚙️</div><div class="stat-info"><h3>${myTasks.filter(l => l.status === 'dalam_pengerjaan').length}</h3><p>Dalam Pengerjaan</p></div></div>
-        <div class="stat-card"><div class="stat-icon success">✅</div><div class="stat-info"><h3>${myTasks.filter(l => l.status === 'selesai').length}</h3><p>Selesai</p></div></div>
+        <div class="stat-card"><div class="stat-icon warning">📩</div><div class="stat-info"><h3>${myTasks.filter(report => waiting.includes(report.status)).length}</h3><p>Menunggu Diproses</p></div></div>
+        <div class="stat-card"><div class="stat-icon violet">⚙️</div><div class="stat-info"><h3>${myTasks.filter(report => progress.includes(report.status)).length}</h3><p>Dalam Perbaikan</p></div></div>
+        <div class="stat-card"><div class="stat-icon success">✅</div><div class="stat-info"><h3>${myTasks.filter(report => report.status === 'selesai').length}</h3><p>Selesai</p></div></div>
       `;
 
-      const active = myTasks.filter(l => ['didisposisi', 'dalam_pengerjaan'].includes(l.status));
+      const active = myTasks.filter(report => report.status !== 'selesai' && report.status !== 'ditolak');
       if (active.length === 0) {
-        document.getElementById('activeTasks').innerHTML = `<div class="empty-state"><div class="icon">🎉</div><h3>Tidak Ada Tugas Aktif</h3><p>Semua tugas sudah selesai!</p></div>`;
+        document.getElementById('activeTasks').innerHTML = `<div class="empty-state"><div class="icon">✅</div><h3>Tidak Ada Tugas Aktif</h3><p>Semua tugas yang diberikan sudah selesai.</p></div>`;
       } else {
         document.getElementById('activeTasks').innerHTML = `
-          <table class="data-table"><thead><tr><th>Judul</th><th>Kategori</th><th>Lokasi</th><th>Status</th><th>Aksi</th></tr></thead><tbody>
-          ${active.map(l => `<tr>
-            <td><strong>${Utils.escapeHtml(Utils.truncate(l.judul, 28))}</strong></td>
-            <td>${Utils.getCategoryIcon(l.kategoriId)} ${Utils.getCategoryName(l.kategoriId)}</td>
-            <td>${Utils.escapeHtml(Utils.truncate(l.lokasi, 22))}</td>
-            <td>${Utils.getStatusBadge(l.status)}</td>
-            <td><a href="proses.html?id=${l.id}" class="btn btn-primary btn-sm">⚙️ Proses</a></td>
-          </tr>`).join('')}
-          </tbody></table>
+          <table class="data-table">
+            <thead><tr><th>Judul</th><th>Kategori</th><th>Lokasi</th><th>Status</th><th>Aksi</th></tr></thead>
+            <tbody>
+              ${active.map(report => `
+                <tr>
+                  <td><strong>${Utils.escapeHtml(Utils.truncate(Utils.getReportTitle(report), 30))}</strong></td>
+                  <td>${Utils.getCategoryIcon(report.categoryId)} ${Utils.getCategoryName(report.categoryId)}</td>
+                  <td>${Utils.escapeHtml(Utils.truncate(Utils.getReportLocation(report), 26))}</td>
+                  <td>${Utils.getStatusBadge(report.status)}</td>
+                  <td><a href="tugas.html?id=${report.id}" class="btn btn-primary btn-sm">⚙️ Update</a></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
         `;
       }
     });
