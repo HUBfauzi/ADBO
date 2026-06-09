@@ -1,0 +1,125 @@
+<mxfile host="Electron" agent="ChatGPT">
+  <diagram name="Collaboration Diagram" id="f1f579839f6042fe926fa1a144bad74b">
+    <mxGraphModel dx="1206" dy="759" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;fontSize=24;fontStyle=1;align=center;verticalAlign=middle;" value="Collaboration Diagram&lt;br&gt;Sistem Pelaporan Kerusakan Fasilitas Umum" vertex="1">
+          <mxGeometry height="70" width="620" x="350" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="login" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f7f7f7;strokeColor=#333333;fontSize=16;fontStyle=1;" value=":Login/Registrasi" vertex="1">
+          <mxGeometry height="60" width="190" x="310" y="130" as="geometry" />
+        </mxCell>
+        <mxCell id="halaman" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f7f7f7;strokeColor=#333333;fontSize=16;fontStyle=1;" value=":Halaman Laporan" vertex="1">
+          <mxGeometry height="60" width="190" x="310" y="350" as="geometry" />
+        </mxCell>
+        <mxCell id="sistem" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eef5ff;strokeColor=#333333;fontSize=16;fontStyle=1;" value=":Sistem Pelaporan" vertex="1">
+          <mxGeometry height="65" width="210" x="610" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="database" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f7f7f7;strokeColor=#333333;fontSize=16;fontStyle=1;" value=":Database" vertex="1">
+          <mxGeometry height="60" width="160" x="1000" y="240" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="LyQNLZ1osy7FMZqqSuy_-7" style="endArrow=block;html=1;rounded=1;strokeWidth=1.5;fontSize=13;edgeStyle=elbowEdgeStyle;elbow=vertical;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;" target="login" value="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="400" y="240" />
+            </Array>
+            <mxPoint x="210" y="240.0769230769231" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="login" style="endArrow=block;html=1;rounded=1;strokeWidth=1.5;fontSize=13;edgeStyle=orthogonalEdgeStyle;" target="sistem" value="2">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="700" y="150" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" style="endArrow=block;html=1;rounded=1;strokeWidth=1.5;fontSize=13;edgeStyle=orthogonalEdgeStyle;entryX=0.005;entryY=0.421;entryDx=0;entryDy=0;entryPerimeter=0;" value="3, 6, 14">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="876" y="271.85" />
+              <mxPoint x="876" y="270.85" />
+              <mxPoint x="930" y="270.85" />
+              <mxPoint x="930" y="272.85" />
+              <mxPoint x="1001" y="272.85" />
+            </Array>
+            <mxPoint x="820" y="272.29063829787236" as="sourcePoint" />
+            <mxPoint x="1000.8" y="267.11" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="LyQNLZ1osy7FMZqqSuy_-7" style="endArrow=block;html=1;rounded=1;strokeWidth=1.5;fontSize=13;edgeStyle=orthogonalEdgeStyle;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;" target="halaman" value="4">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="165" y="280" />
+              <mxPoint x="380" y="280" />
+            </Array>
+            <mxPoint x="210" y="280.0769230769231" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e5" edge="1" parent="1" source="halaman" style="endArrow=block;html=1;rounded=1;strokeWidth=1.5;fontSize=13;edgeStyle=orthogonalEdgeStyle;" target="sistem" value="5">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="680" y="380" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e7" edge="1" parent="1" source="LyQNLZ1osy7FMZqqSuy_-9" style="endArrow=block;html=1;rounded=1;strokeWidth=1.5;fontSize=13;edgeStyle=orthogonalEdgeStyle;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;" target="sistem" value="7, 9, 9a">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="700" y="620" />
+            </Array>
+            <mxPoint x="540" y="620.0526315789473" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e10" edge="1" parent="1" source="sistem" style="endArrow=block;html=1;rounded=1;strokeWidth=1.5;fontSize=13;edgeStyle=elbowEdgeStyle;exitX=1;exitY=0.75;exitDx=0;exitDy=0;elbow=vertical;entryX=0.5;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;" target="LyQNLZ1osy7FMZqqSuy_-11" value="10">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="980" y="380" />
+            </Array>
+            <mxPoint x="880" y="288.75" as="sourcePoint" />
+            <mxPoint x="985" y="590" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e11" edge="1" parent="1" source="LyQNLZ1osy7FMZqqSuy_-11" style="endArrow=block;html=1;rounded=1;strokeWidth=1.5;fontSize=13;edgeStyle=orthogonalEdgeStyle;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;" target="sistem" value="11, 12, 13">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="840" y="575" />
+              <mxPoint x="840" y="447" />
+              <mxPoint x="720" y="447" />
+            </Array>
+            <mxPoint x="840.0588235294117" y="590" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e15" edge="1" parent="1" source="LyQNLZ1osy7FMZqqSuy_-7" style="endArrow=block;html=1;rounded=1;strokeWidth=1.5;fontSize=13;edgeStyle=orthogonalEdgeStyle;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;entryX=-0.016;entryY=0.404;entryDx=0;entryDy=0;entryPerimeter=0;" target="sistem" value="15">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points" />
+            <mxPoint x="210" y="260.0769230769231" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e16" edge="1" parent="1" source="LyQNLZ1osy7FMZqqSuy_-5" style="endArrow=block;html=1;rounded=1;strokeWidth=1.5;fontSize=13;edgeStyle=orthogonalEdgeStyle;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;exitPerimeter=0;" target="sistem" value="16, 17">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="990" y="150.0769230769231" as="sourcePoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fffdef;strokeColor=#555555;fontSize=13;align=left;verticalAlign=top;spacing=10;" value="&lt;b&gt;Urutan Pesan:&lt;/b&gt;&lt;br&gt;1 Registrasi/Login&lt;br&gt;2 Kirim data akun ke sistem&lt;br&gt;3 Validasi/simpan pengguna di database&lt;br&gt;4 Membuat laporan dan upload foto kerusakan&lt;br&gt;5 Kirim data laporan ke sistem&lt;br&gt;6 Simpan laporan, status awal: Diajukan&lt;br&gt;7 Admin memverifikasi laporan&lt;br&gt;9/9a Disposisi ke petugas atau tolak/minta perbaikan&lt;br&gt;10 Sistem mengirim tugas ke petugas&lt;br&gt;11 Petugas melihat tugas&lt;br&gt;12 Petugas memproses perbaikan dan update status&lt;br&gt;13 Petugas mengunggah bukti perbaikan&lt;br&gt;14 Sistem menyimpan status dan bukti perbaikan&lt;br&gt;15 Masyarakat melihat status laporan&lt;br&gt;16 Kepala Dinas melihat dashboard/rekap&lt;br&gt;17 Kepala Dinas mencetak laporan" vertex="1">
+          <mxGeometry height="320" width="1130" x="40" y="790" as="geometry" />
+        </mxCell>
+        <mxCell id="note" parent="1" style="text;html=1;strokeColor=none;fillColor=none;fontSize=13;fontStyle=0;align=center;" value="Sinkron dengan State Machine: Diajukan → Menunggu Verifikasi → Terverifikasi/Perlu Perbaikan/Ditolak → Didisposisikan → Dalam Perbaikan → Bukti Diunggah → Selesai" vertex="1">
+          <mxGeometry height="40" width="780" x="230" y="740" as="geometry" />
+        </mxCell>
+        <mxCell id="LyQNLZ1osy7FMZqqSuy_-5" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" value="&lt;b&gt;:Kepala Dinas&lt;/b&gt;" vertex="1">
+          <mxGeometry height="110" width="70" x="1000" y="70" as="geometry" />
+        </mxCell>
+        <mxCell id="LyQNLZ1osy7FMZqqSuy_-7" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" value="&lt;b&gt;:Masyarakat&lt;/b&gt;" vertex="1">
+          <mxGeometry height="110" width="70" x="130" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="LyQNLZ1osy7FMZqqSuy_-9" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" value="&lt;b&gt;:Admin&lt;/b&gt;" vertex="1">
+          <mxGeometry height="110" width="70" x="460" y="565" as="geometry" />
+        </mxCell>
+        <mxCell id="LyQNLZ1osy7FMZqqSuy_-11" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;" value="&lt;b&gt;:Petugas Jalanan&lt;/b&gt;" vertex="1">
+          <mxGeometry height="110" width="70" x="890" y="520" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
