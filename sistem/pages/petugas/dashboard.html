@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Petugas Lapangan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../css/variables.css" />
+  <link rel="stylesheet" href="../../css/main.css" />
+  <link rel="stylesheet" href="../../css/pages.css" />
+  <link rel="stylesheet" href="../../css/responsive.css" />
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="App.toggleSidebar()"></div>
+    <div class="main-area">
+      <header class="topbar" id="topbar"></header>
+      <main class="page-content">
+        <div class="page-header">
+          <h1>Dashboard Petugas</h1>
+          <p>Ringkasan tugas perbaikan fasilitas yang ditugaskan kepada Anda.</p>
+        </div>
+        <div class="stat-grid" id="statGrid"></div>
+        <div class="card" style="margin-top:24px;">
+          <div class="card-header"><h3>🔧 Tugas Aktif</h3></div>
+          <div class="card-body" id="activeTasks"></div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="../../js/db.js"></script>
+  <script src="../../js/auth.js"></script>
+  <script src="../../js/utils.js"></script>
+  <script src="../../js/app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!App.init('Dashboard', ['petugas'])) return;
+      const user = Auth.getCurrentUser();
+      const myTasks = DB.filter('laporan', l => l.petugasId === user.id);
+
+      document.getElementById('statGrid').innerHTML = `
+        <div class="stat-card"><div class="stat-icon primary">📋</div><div class="stat-info"><h3>${myTasks.length}</h3><p>Total Tugas</p></div></div>
+        <div class="stat-card"><div class="stat-icon warning">📩</div><div class="stat-info"><h3>${myTasks.filter(l => l.status === 'didisposisi').length}</h3><p>Menunggu Dikerjakan</p></div></div>
+        <div class="stat-card"><div class="stat-icon violet">⚙️</div><div class="stat-info"><h3>${myTasks.filter(l => l.status === 'dalam_pengerjaan').length}</h3><p>Dalam Pengerjaan</p></div></div>
+        <div class="stat-card"><div class="stat-icon success">✅</div><div class="stat-info"><h3>${myTasks.filter(l => l.status === 'selesai').length}</h3><p>Selesai</p></div></div>
+      `;
+
+      const active = myTasks.filter(l => ['didisposisi', 'dalam_pengerjaan'].includes(l.status));
+      if (active.length === 0) {
+        document.getElementById('activeTasks').innerHTML = `<div class="empty-state"><div class="icon">🎉</div><h3>Tidak Ada Tugas Aktif</h3><p>Semua tugas sudah selesai!</p></div>`;
+      } else {
+        document.getElementById('activeTasks').innerHTML = `
+          <table class="data-table"><thead><tr><th>Judul</th><th>Kategori</th><th>Lokasi</th><th>Status</th><th>Aksi</th></tr></thead><tbody>
+          ${active.map(l => `<tr>
+            <td><strong>${Utils.escapeHtml(Utils.truncate(l.judul, 28))}</strong></td>
+            <td>${Utils.getCategoryIcon(l.kategoriId)} ${Utils.getCategoryName(l.kategoriId)}</td>
+            <td>${Utils.escapeHtml(Utils.truncate(l.lokasi, 22))}</td>
+            <td>${Utils.getStatusBadge(l.status)}</td>
+            <td><a href="proses.html?id=${l.id}" class="btn btn-primary btn-sm">⚙️ Proses</a></td>
+          </tr>`).join('')}
+          </tbody></table>
+        `;
+      }
+    });
+  </script>
+</body>
+</html>

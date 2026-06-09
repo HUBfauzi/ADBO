@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Buat Laporan — Lapor Fasilitas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../css/variables.css" />
+  <link rel="stylesheet" href="../../css/main.css" />
+  <link rel="stylesheet" href="../../css/pages.css" />
+  <link rel="stylesheet" href="../../css/responsive.css" />
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="App.toggleSidebar()"></div>
+    <div class="main-area">
+      <header class="topbar" id="topbar"></header>
+      <main class="page-content">
+        <div class="page-header">
+          <h1>📝 Buat Laporan Kerusakan</h1>
+          <p>Laporkan kerusakan fasilitas umum di lingkungan Anda.</p>
+        </div>
+
+        <div class="card" style="max-width:720px;">
+          <div class="card-body">
+            <form id="laporanForm" onsubmit="return handleSubmit(event)">
+              <div class="form-group">
+                <label class="form-label" for="judul">Judul Laporan *</label>
+                <input type="text" id="judul" class="form-input" placeholder="Contoh: Jalan Berlubang di Jl. Merdeka" required />
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label class="form-label" for="kategori">Kategori Kerusakan *</label>
+                  <select id="kategori" class="form-select" required>
+                    <option value="">— Pilih Kategori —</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" for="lokasi">Lokasi *</label>
+                  <input type="text" id="lokasi" class="form-input" placeholder="Alamat/lokasi kerusakan" required />
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="deskripsi">Deskripsi Kerusakan *</label>
+                <textarea id="deskripsi" class="form-textarea" placeholder="Jelaskan kondisi kerusakan secara detail..." rows="4" required></textarea>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Upload Foto Kerusakan</label>
+                <div class="file-upload" id="fileUpload" onclick="document.getElementById('fotoInput').click()">
+                  <div class="icon">📷</div>
+                  <p>Klik untuk memilih foto atau drag & drop</p>
+                  <p style="font-size:11px;color:var(--text-muted);margin-top:4px;">Format: JPG, PNG (maks 2MB)</p>
+                </div>
+                <input type="file" id="fotoInput" accept="image/*" style="display:none" onchange="previewFoto(this)" />
+                <div class="file-preview" id="fotoPreview" style="display:none;"></div>
+              </div>
+
+              <div id="formError" class="form-error" style="display:none;margin-bottom:12px;"></div>
+
+              <div style="display:flex;gap:12px;margin-top:24px;">
+                <button type="submit" class="btn btn-primary btn-lg">📤 Kirim Laporan</button>
+                <a href="dashboard.html" class="btn btn-outline btn-lg">Batal</a>
+              </div>
+            </form>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="../../js/db.js"></script>
+  <script src="../../js/auth.js"></script>
+  <script src="../../js/utils.js"></script>
+  <script src="../../js/app.js"></script>
+  <script>
+    let fotoBase64 = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!App.init('Buat Laporan', ['masyarakat'])) return;
+
+      // Load categories
+      const kategori = DB.getAll('kategori');
+      const select = document.getElementById('kategori');
+      kategori.forEach(k => {
+        const opt = document.createElement('option');
+        opt.value = k.id;
+        opt.textContent = k.icon + ' ' + k.nama;
+        select.appendChild(opt);
+      });
+    });
+
+    function previewFoto(input) {
+      const file = input.files[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) {
+        Utils.showToast('Ukuran file melebihi 2MB.', 'error');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        fotoBase64 = e.target.result;
+        document.getElementById('fotoPreview').innerHTML = `<img src="${fotoBase64}" alt="Preview" />`;
+        document.getElementById('fotoPreview').style.display = 'block';
+        document.getElementById('fileUpload').innerHTML = `<div class="icon">✅</div><p class="file-name">${file.name}</p><p style="font-size:11px;color:var(--text-muted);">Klik untuk ganti foto</p>`;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function handleSubmit(e) {
+      e.preventDefault();
+      const user = Auth.getCurrentUser();
+
+      const laporan = {
+        userId: user.id,
+        judul: document.getElementById('judul').value.trim(),
+        deskripsi: document.getElementById('deskripsi').value.trim(),
+        kategoriId: document.getElementById('kategori').value,
+        lokasi: document.getElementById('lokasi').value.trim(),
+        foto: fotoBase64,
+        status: 'terkirim',
+        petugasId: null,
+        fotoBukti: null,
+        catatanAdmin: null,
+        catatanPetugas: null
+      };
+
+      DB.insert('laporan', laporan);
+      Utils.showToast('Laporan berhasil dikirim!', 'success');
+      setTimeout(() => {
+        window.location.href = 'status-laporan.html';
+      }, 1000);
+      return false;
+    }
+  </script>
+</body>
+</html>

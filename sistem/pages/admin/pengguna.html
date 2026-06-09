@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kelola Pengguna — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../css/variables.css" />
+  <link rel="stylesheet" href="../../css/main.css" />
+  <link rel="stylesheet" href="../../css/pages.css" />
+  <link rel="stylesheet" href="../../css/responsive.css" />
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="App.toggleSidebar()"></div>
+    <div class="main-area">
+      <header class="topbar" id="topbar"></header>
+      <main class="page-content">
+        <div class="page-header">
+          <h1>👥 Kelola Data Pengguna</h1>
+          <p>Lihat dan kelola semua akun pengguna sistem.</p>
+        </div>
+
+        <div class="toolbar">
+          <div class="toolbar-search">
+            <span class="icon">🔍</span>
+            <input type="text" id="searchInput" placeholder="Cari pengguna..." oninput="filterUsers()" />
+          </div>
+          <select class="form-select" id="filterRole" onchange="filterUsers()" style="width:180px;padding:9px 14px;">
+            <option value="">Semua Role</option>
+            <option value="masyarakat">Masyarakat</option>
+            <option value="admin">Admin</option>
+            <option value="petugas">Petugas Lapangan</option>
+            <option value="kepala_dinas">Kepala Dinas</option>
+          </select>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead><tr><th>No</th><th>Nama</th><th>Email</th><th>Role</th><th>NIK</th><th>Terdaftar</th><th>Aksi</th></tr></thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="../../js/db.js"></script>
+  <script src="../../js/auth.js"></script>
+  <script src="../../js/utils.js"></script>
+  <script src="../../js/app.js"></script>
+  <script>
+    let allUsers = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!App.init('Data Pengguna', ['admin'])) return;
+      allUsers = DB.getAll('users');
+      renderTable(allUsers);
+    });
+
+    function filterUsers() {
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const role = document.getElementById('filterRole').value;
+      let filtered = allUsers;
+      if (search) filtered = filtered.filter(u => u.nama.toLowerCase().includes(search) || u.email.toLowerCase().includes(search));
+      if (role) filtered = filtered.filter(u => u.role === role);
+      renderTable(filtered);
+    }
+
+    function renderTable(data) {
+      const roleColors = { masyarakat: 'tag-actor', admin: 'tag-usecase', petugas: 'tag-object', kepala_dinas: 'tag-state' };
+      document.getElementById('tableBody').innerHTML = data.map((u, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td><div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:32px;height:32px;border-radius:50%;background:var(--gradient-primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;">${Utils.getInitials(u.nama)}</div>
+            <strong>${Utils.escapeHtml(u.nama)}</strong>
+          </div></td>
+          <td style="color:var(--text-muted)">${u.email}</td>
+          <td><span class="badge ${roleColors[u.role] || ''}" style="background:var(--accent-primary-light);color:var(--accent-primary);">${Auth.getRoleName(u.role)}</span></td>
+          <td style="color:var(--text-muted);font-size:var(--font-size-xs)">${u.nik || '-'}</td>
+          <td style="color:var(--text-muted);font-size:var(--font-size-xs)">${Utils.formatDate(u.createdAt)}</td>
+          <td>
+            <div class="action-btns">
+              <button class="action-btn delete" title="Hapus" onclick="deleteUser('${u.id}')">🗑️</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function deleteUser(id) {
+      const current = Auth.getCurrentUser();
+      if (id === current.id) { Utils.showToast('Tidak bisa menghapus akun sendiri.', 'error'); return; }
+      if (confirm('Yakin ingin menghapus pengguna ini?')) {
+        DB.delete('users', id);
+        allUsers = DB.getAll('users');
+        renderTable(allUsers);
+        Utils.showToast('Pengguna dihapus.', 'warning');
+      }
+    }
+  </script>
+</body>
+</html>

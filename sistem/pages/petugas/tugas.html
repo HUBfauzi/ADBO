@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Daftar Tugas — Petugas Lapangan</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../css/variables.css" />
+  <link rel="stylesheet" href="../../css/main.css" />
+  <link rel="stylesheet" href="../../css/pages.css" />
+  <link rel="stylesheet" href="../../css/responsive.css" />
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="App.toggleSidebar()"></div>
+    <div class="main-area">
+      <header class="topbar" id="topbar"></header>
+      <main class="page-content">
+        <div class="page-header">
+          <h1>🔧 Daftar Tugas</h1>
+          <p>Semua tugas perbaikan yang ditugaskan kepada Anda.</p>
+        </div>
+
+        <div class="toolbar">
+          <div class="toolbar-search">
+            <span class="icon">🔍</span>
+            <input type="text" id="searchInput" placeholder="Cari tugas..." oninput="filterTable()" />
+          </div>
+          <select class="form-select" id="filterStatus" onchange="filterTable()" style="width:180px;padding:9px 14px;">
+            <option value="">Semua Status</option>
+            <option value="didisposisi">Didisposisi</option>
+            <option value="dalam_pengerjaan">Dalam Pengerjaan</option>
+            <option value="selesai">Selesai</option>
+          </select>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead><tr><th>No</th><th>Judul</th><th>Kategori</th><th>Lokasi</th><th>Status</th><th>Tanggal Disposisi</th><th>Aksi</th></tr></thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="../../js/db.js"></script>
+  <script src="../../js/auth.js"></script>
+  <script src="../../js/utils.js"></script>
+  <script src="../../js/app.js"></script>
+  <script>
+    let allTasks = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!App.init('Daftar Tugas', ['petugas'])) return;
+      const user = Auth.getCurrentUser();
+      allTasks = DB.filter('laporan', l => l.petugasId === user.id)
+        .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
+      renderTable(allTasks);
+    });
+
+    function filterTable() {
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const status = document.getElementById('filterStatus').value;
+      let filtered = allTasks;
+      if (search) filtered = filtered.filter(l => l.judul.toLowerCase().includes(search));
+      if (status) filtered = filtered.filter(l => l.status === status);
+      renderTable(filtered);
+    }
+
+    function renderTable(data) {
+      if (data.length === 0) {
+        document.getElementById('tableBody').innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="icon">📭</div><h3>Tidak Ada Tugas</h3></div></td></tr>`;
+        return;
+      }
+      document.getElementById('tableBody').innerHTML = data.map((l, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td><strong>${Utils.escapeHtml(Utils.truncate(l.judul, 28))}</strong></td>
+          <td>${Utils.getCategoryIcon(l.kategoriId)} ${Utils.getCategoryName(l.kategoriId)}</td>
+          <td>${Utils.escapeHtml(Utils.truncate(l.lokasi, 22))}</td>
+          <td>${Utils.getStatusBadge(l.status)}</td>
+          <td style="color:var(--text-muted);font-size:var(--font-size-xs)">${Utils.formatDate(l.updatedAt || l.createdAt)}</td>
+          <td>
+            ${l.status !== 'selesai' ? `<a href="proses.html?id=${l.id}" class="btn btn-primary btn-sm">⚙️ Proses</a>` : `<span class="badge badge-selesai">✅ Selesai</span>`}
+          </td>
+        </tr>
+      `).join('');
+    }
+  </script>
+</body>
+</html>

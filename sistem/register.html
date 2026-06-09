@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Registrasi — Lapor Fasilitas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/pages.css" />
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-bg">
+      <div class="login-grid"></div>
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+      <div class="orb orb-3"></div>
+    </div>
+
+    <div class="login-container" style="max-width:500px;">
+      <div class="login-card">
+        <div class="login-header">
+          <div class="login-logo">🏛️</div>
+          <h1>Registrasi Akun</h1>
+          <p>Daftarkan akun Anda untuk melaporkan kerusakan fasilitas umum</p>
+        </div>
+
+        <form id="registerForm" onsubmit="return handleRegister(event)">
+          <div class="form-group">
+            <label class="form-label" for="nama">Nama Lengkap</label>
+            <input type="text" id="nama" class="form-input" placeholder="Masukkan nama lengkap" required />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="email">Email</label>
+              <input type="email" id="email" class="form-input" placeholder="email@contoh.com" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="telepon">No. Telepon</label>
+              <input type="tel" id="telepon" class="form-input" placeholder="08xxxxxxxxxx" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="nik">NIK (Nomor Induk Kependudukan)</label>
+            <input type="text" id="nik" class="form-input" placeholder="16 digit NIK" maxlength="16" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="alamat">Alamat</label>
+            <textarea id="alamat" class="form-textarea" placeholder="Masukkan alamat lengkap" rows="2"></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="password">Password</label>
+              <input type="password" id="password" class="form-input" placeholder="Min. 6 karakter" required minlength="6" />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="confirmPassword">Konfirmasi Password</label>
+              <input type="password" id="confirmPassword" class="form-input" placeholder="Ulangi password" required />
+            </div>
+          </div>
+
+          <div id="registerError" class="form-error" style="display:none; margin-bottom:12px;"></div>
+
+          <button type="submit" class="btn btn-primary btn-block btn-lg">Daftar Sekarang</button>
+        </form>
+
+        <div class="login-footer">
+          Sudah punya akun? <a href="index.html">Masuk di sini</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/db.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script>
+    function handleRegister(e) {
+      e.preventDefault();
+      const errorEl = document.getElementById('registerError');
+      const password = document.getElementById('password').value;
+      const confirm = document.getElementById('confirmPassword').value;
+
+      if (password !== confirm) {
+        errorEl.textContent = 'Password dan konfirmasi tidak cocok.';
+        errorEl.style.display = 'block';
+        return false;
+      }
+
+      const result = Auth.register({
+        nama: document.getElementById('nama').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        password: password,
+        nik: document.getElementById('nik').value.trim(),
+        alamat: document.getElementById('alamat').value.trim(),
+        telepon: document.getElementById('telepon').value.trim()
+      });
+
+      if (result.success) {
+        alert('Registrasi berhasil! Silakan login.');
+        window.location.href = 'index.html';
+      } else {
+        errorEl.textContent = result.message;
+        errorEl.style.display = 'block';
+      }
+      return false;
+    }
+  </script>
+</body>
+</html>

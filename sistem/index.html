@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — Sistem Pelaporan Kerusakan Fasilitas Umum</title>
+  <meta name="description" content="Login ke Sistem Pelaporan Kerusakan Fasilitas Umum berbasis web." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/variables.css" />
+  <link rel="stylesheet" href="css/main.css" />
+  <link rel="stylesheet" href="css/pages.css" />
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-bg">
+      <div class="login-grid"></div>
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+      <div class="orb orb-3"></div>
+    </div>
+
+    <div class="login-container">
+      <div class="login-card">
+        <div class="login-header">
+          <div class="login-logo">🏛️</div>
+          <h1>Lapor Fasilitas</h1>
+          <p>Sistem Pelaporan Kerusakan Fasilitas Umum</p>
+        </div>
+
+        <form id="loginForm" onsubmit="return handleLogin(event)">
+          <div class="form-group">
+            <label class="form-label" for="email">Email</label>
+            <input type="email" id="email" class="form-input" placeholder="Masukkan email Anda" required autocomplete="email" />
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="password">Password</label>
+            <input type="password" id="password" class="form-input" placeholder="Masukkan password" required autocomplete="current-password" />
+          </div>
+
+          <div id="loginError" class="form-error" style="display:none; margin-bottom:12px;"></div>
+
+          <button type="submit" class="btn btn-primary btn-block btn-lg" id="loginBtn">
+            Masuk
+          </button>
+        </form>
+
+        <div class="login-footer">
+          Belum punya akun? <a href="register.html">Daftar Sekarang</a>
+        </div>
+
+        <div class="login-demo">
+          <h4>Demo Accounts</h4>
+          <div class="demo-accounts">
+            <button class="demo-btn" onclick="fillDemo('masyarakat@demo.com')">
+              <span class="role">👤 Masyarakat</span>
+              <span class="email">masyarakat@demo.com</span>
+            </button>
+            <button class="demo-btn" onclick="fillDemo('admin@demo.com')">
+              <span class="role">🛡️ Admin</span>
+              <span class="email">admin@demo.com</span>
+            </button>
+            <button class="demo-btn" onclick="fillDemo('petugas@demo.com')">
+              <span class="role">🔧 Petugas</span>
+              <span class="email">petugas@demo.com</span>
+            </button>
+            <button class="demo-btn" onclick="fillDemo('kepala@demo.com')">
+              <span class="role">👔 Kepala Dinas</span>
+              <span class="email">kepala@demo.com</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/db.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script>
+    // Redirect if already logged in
+    if (Auth.isLoggedIn()) {
+      window.location.href = Auth.getDashboardUrl(Auth.getRole());
+    }
+
+    function fillDemo(email) {
+      document.getElementById('email').value = email;
+      document.getElementById('password').value = '123456';
+      document.getElementById('email').focus();
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const errorEl = document.getElementById('loginError');
+
+      if (!email || !password) {
+        errorEl.textContent = 'Mohon isi email dan password.';
+        errorEl.style.display = 'block';
+        return false;
+      }
+
+      const result = Auth.login(email, password);
+      if (result.success) {
+        window.location.href = Auth.getDashboardUrl(result.user.role);
+      } else {
+        errorEl.textContent = result.message;
+        errorEl.style.display = 'block';
+      }
+      return false;
+    }
+  </script>
+</body>
+</html>

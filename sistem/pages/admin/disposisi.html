@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Disposisi Laporan — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../css/variables.css" />
+  <link rel="stylesheet" href="../../css/main.css" />
+  <link rel="stylesheet" href="../../css/pages.css" />
+  <link rel="stylesheet" href="../../css/responsive.css" />
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="App.toggleSidebar()"></div>
+    <div class="main-area">
+      <header class="topbar" id="topbar"></header>
+      <main class="page-content">
+        <div class="page-header">
+          <h1>📤 Disposisi Laporan</h1>
+          <p>Tugaskan laporan yang telah diverifikasi ke petugas lapangan.</p>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr><th>No</th><th>Judul</th><th>Pelapor</th><th>Kategori</th><th>Lokasi</th><th>Aksi</th></tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+
+        <!-- Disposisi Modal -->
+        <div class="modal-overlay" id="dispModal">
+          <div class="modal">
+            <div class="modal-header">
+              <h2>Disposisi ke Petugas</h2>
+              <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body">
+              <div id="dispDetail"></div>
+              <div class="form-group" style="margin-top:16px;">
+                <label class="form-label">Pilih Petugas Lapangan *</label>
+                <select id="petugasSelect" class="form-select" required></select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Catatan Disposisi</label>
+                <textarea id="catatanDisp" class="form-textarea" placeholder="Instruksi tambahan untuk petugas..." rows="2"></textarea>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button class="btn btn-outline" onclick="closeModal()">Batal</button>
+              <button class="btn btn-primary" onclick="doDisposisi()">📤 Disposisi</button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="../../js/db.js"></script>
+  <script src="../../js/auth.js"></script>
+  <script src="../../js/utils.js"></script>
+  <script src="../../js/app.js"></script>
+  <script>
+    let currentId = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!App.init('Disposisi Laporan', ['admin'])) return;
+      loadTable();
+    });
+
+    function loadTable() {
+      const verified = DB.filter('laporan', l => l.status === 'diverifikasi');
+      const tbody = document.getElementById('tableBody');
+
+      if (verified.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="icon">📭</div><h3>Tidak Ada Laporan</h3><p>Belum ada laporan yang siap didisposisi.</p></div></td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = verified.map((l, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td><strong>${Utils.escapeHtml(Utils.truncate(l.judul, 30))}</strong></td>
+          <td>${Utils.getUserName(l.userId)}</td>
+          <td>${Utils.getCategoryIcon(l.kategoriId)} ${Utils.getCategoryName(l.kategoriId)}</td>
+          <td>${Utils.escapeHtml(Utils.truncate(l.lokasi, 22))}</td>
+          <td><button class="btn btn-primary btn-sm" onclick="openDisposisi('${l.id}')">📤 Disposisi</button></td>
+        </tr>
+      `).join('');
+    }
+
+    function openDisposisi(id) {
+      currentId = id;
+      const l = DB.getById('laporan', id);
+      document.getElementById('dispDetail').innerHTML = `
+        <div class="detail-item"><div class="label">Judul</div><div class="value">${Utils.escapeHtml(l.judul)}</div></div>
+        <div class="detail-item"><div class="label">Lokasi</div><div class="value">${Utils.escapeHtml(l.lokasi)}</div></div>
+      `;
+
+      // Load petugas
+      const petugas = DB.filter('users', u => u.role === 'petugas');
+      const select = document.getElementById('petugasSelect');
+      select.innerHTML = '<option value="">— Pilih Petugas —</option>';
+      petugas.forEach(p => {
+        select.innerHTML += `<option value="${p.id}">🔧 ${p.nama}</option>`;
+      });
+
+      document.getElementById('dispModal').classList.add('show');
+    }
+
+    function doDisposisi() {
+      const petugasId = document.getElementById('petugasSelect').value;
+      if (!petugasId) { Utils.showToast('Pilih petugas terlebih dahulu.', 'error'); return; }
+      const catatan = document.getElementById('catatanDisp').value.trim();
+      DB.update('laporan', currentId, {
+        status: 'didisposisi',
+        petugasId: petugasId,
+        catatanAdmin: (DB.getById('laporan', currentId).catatanAdmin || '') + (catatan ? '\nDisposisi: ' + catatan : '')
+      });
+      closeModal();
+      loadTable();
+      Utils.showToast('Laporan berhasil didisposisi ke petugas.', 'success');
+    }
+
+    function closeModal() { document.getElementById('dispModal').classList.remove('show'); }
+    document.getElementById('dispModal').addEventListener('click', e => { if (e.target.classList.contains('modal-overlay')) closeModal(); });
+  </script>
+</body>
+</html>

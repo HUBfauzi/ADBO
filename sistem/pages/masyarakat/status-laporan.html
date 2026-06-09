@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Status Laporan — Lapor Fasilitas</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../css/variables.css" />
+  <link rel="stylesheet" href="../../css/main.css" />
+  <link rel="stylesheet" href="../../css/pages.css" />
+  <link rel="stylesheet" href="../../css/responsive.css" />
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="App.toggleSidebar()"></div>
+    <div class="main-area">
+      <header class="topbar" id="topbar"></header>
+      <main class="page-content">
+        <div class="page-header">
+          <h1>📋 Status Laporan Saya</h1>
+          <p>Pantau status dan progres laporan kerusakan yang Anda buat.</p>
+        </div>
+
+        <div class="toolbar">
+          <div class="toolbar-search">
+            <span class="icon">🔍</span>
+            <input type="text" id="searchInput" placeholder="Cari laporan..." oninput="filterTable()" />
+          </div>
+          <div class="toolbar-actions">
+            <select class="form-select" id="filterStatus" onchange="filterTable()" style="width:180px;padding:9px 14px;">
+              <option value="">Semua Status</option>
+              <option value="terkirim">Terkirim</option>
+              <option value="diverifikasi">Diverifikasi</option>
+              <option value="didisposisi">Didisposisi</option>
+              <option value="dalam_pengerjaan">Dalam Pengerjaan</option>
+              <option value="selesai">Selesai</option>
+              <option value="ditolak">Ditolak</option>
+            </select>
+            <a href="buat-laporan.html" class="btn btn-primary btn-sm">+ Buat Laporan</a>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table" id="laporanTable">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Judul</th>
+                <th>Kategori</th>
+                <th>Lokasi</th>
+                <th>Status</th>
+                <th>Tanggal</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+
+        <!-- Detail Modal -->
+        <div class="modal-overlay" id="detailModal">
+          <div class="modal" style="max-width:640px;">
+            <div class="modal-header">
+              <h2>Detail Laporan</h2>
+              <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body" id="detailContent"></div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="../../js/db.js"></script>
+  <script src="../../js/auth.js"></script>
+  <script src="../../js/utils.js"></script>
+  <script src="../../js/app.js"></script>
+  <script>
+    let allReports = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!App.init('Status Laporan', ['masyarakat'])) return;
+      loadTable();
+    });
+
+    function loadTable() {
+      const user = Auth.getCurrentUser();
+      allReports = DB.filter('laporan', l => l.userId === user.id)
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      renderTable(allReports);
+    }
+
+    function filterTable() {
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const status = document.getElementById('filterStatus').value;
+      let filtered = allReports;
+      if (search) filtered = filtered.filter(l => l.judul.toLowerCase().includes(search) || l.lokasi.toLowerCase().includes(search));
+      if (status) filtered = filtered.filter(l => l.status === status);
+      renderTable(filtered);
+    }
+
+    function renderTable(data) {
+      const tbody = document.getElementById('tableBody');
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="icon">📭</div><h3>Tidak Ada Laporan</h3></div></td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.map((l, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td><strong>${Utils.escapeHtml(Utils.truncate(l.judul, 30))}</strong></td>
+          <td>${Utils.getCategoryIcon(l.kategoriId)} ${Utils.getCategoryName(l.kategoriId)}</td>
+          <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;">${Utils.escapeHtml(Utils.truncate(l.lokasi, 25))}</td>
+          <td>${Utils.getStatusBadge(l.status)}</td>
+          <td style="color:var(--text-muted);font-size:var(--font-size-xs)">${Utils.formatDate(l.createdAt)}</td>
+          <td>
+            <div class="action-btns">
+              <button class="action-btn view" title="Lihat Detail" onclick="showDetail('${l.id}')">👁️</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    const statusOrder = ['terkirim', 'diverifikasi', 'didisposisi', 'dalam_pengerjaan', 'selesai'];
+    const statusLabels = ['Terkirim', 'Diverifikasi', 'Didisposisi', 'Dalam Pengerjaan', 'Selesai'];
+
+    function showDetail(id) {
+      const l = DB.getById('laporan', id);
+      if (!l) return;
+
+      const currentIdx = statusOrder.indexOf(l.status);
+      const isRejected = l.status === 'ditolak';
+
+      let tracker = '';
+      if (!isRejected) {
+        tracker = `<div class="status-tracker">${statusOrder.map((s, i) => {
+          let cls = '';
+          if (i < currentIdx) cls = 'completed';
+          else if (i === currentIdx) cls = 'active';
+          return `
+            <div class="tracker-step ${cls}">
+              <div class="tracker-dot">${i < currentIdx ? '✓' : (i + 1)}</div>
+              <div class="tracker-label">${statusLabels[i]}</div>
+            </div>
+            ${i < statusOrder.length - 1 ? '<div class="tracker-line"></div>' : ''}
+          `;
+        }).join('')}</div>`;
+      } else {
+        tracker = `<div style="padding:12px;border-radius:var(--radius-md);background:var(--accent-rose-light);color:var(--accent-rose);font-weight:600;text-align:center;">❌ Laporan Ditolak</div>`;
+      }
+
+      document.getElementById('detailContent').innerHTML = `
+        <div class="report-id" style="margin-bottom:16px;">#${l.id}</div>
+        ${tracker}
+        <div class="detail-grid" style="margin-top:20px;">
+          <div>
+            <div class="detail-item"><div class="label">Judul</div><div class="value">${Utils.escapeHtml(l.judul)}</div></div>
+            <div class="detail-item"><div class="label">Kategori</div><div class="value">${Utils.getCategoryIcon(l.kategoriId)} ${Utils.getCategoryName(l.kategoriId)}</div></div>
+            <div class="detail-item"><div class="label">Lokasi</div><div class="value">${Utils.escapeHtml(l.lokasi)}</div></div>
+          </div>
+          <div>
+            <div class="detail-item"><div class="label">Tanggal Dibuat</div><div class="value">${Utils.formatDateTime(l.createdAt)}</div></div>
+            <div class="detail-item"><div class="label">Terakhir Update</div><div class="value">${Utils.formatDateTime(l.updatedAt)}</div></div>
+            ${l.petugasId ? `<div class="detail-item"><div class="label">Petugas</div><div class="value">${Utils.getUserName(l.petugasId)}</div></div>` : ''}
+          </div>
+        </div>
+        <div class="detail-item" style="margin-top:8px;"><div class="label">Deskripsi</div><div class="value">${Utils.escapeHtml(l.deskripsi)}</div></div>
+        ${l.catatanAdmin ? `<div class="detail-item" style="margin-top:12px;"><div class="label">Catatan Admin</div><div class="value" style="color:var(--accent-amber);">${Utils.escapeHtml(l.catatanAdmin)}</div></div>` : ''}
+        ${l.catatanPetugas ? `<div class="detail-item" style="margin-top:12px;"><div class="label">Catatan Petugas</div><div class="value" style="color:var(--accent-cyan);">${Utils.escapeHtml(l.catatanPetugas)}</div></div>` : ''}
+        ${l.foto ? `<div class="detail-item" style="margin-top:12px;"><div class="label">Foto Kerusakan</div><div class="file-preview" style="display:block;"><img src="${l.foto}" alt="Foto" /></div></div>` : ''}
+        ${l.fotoBukti ? `<div class="detail-item" style="margin-top:12px;"><div class="label">Bukti Perbaikan</div><div class="file-preview" style="display:block;"><img src="${l.fotoBukti}" alt="Bukti" /></div></div>` : ''}
+      `;
+      document.getElementById('detailModal').classList.add('show');
+    }
+
+    function closeModal() {
+      document.getElementById('detailModal').classList.remove('show');
+    }
+
+    document.getElementById('detailModal').addEventListener('click', (e) => {
+      if (e.target.classList.contains('modal-overlay')) closeModal();
+    });
+  </script>
+</body>
+</html>

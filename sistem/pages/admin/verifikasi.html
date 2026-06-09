@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verifikasi Laporan — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../../css/variables.css" />
+  <link rel="stylesheet" href="../../css/main.css" />
+  <link rel="stylesheet" href="../../css/pages.css" />
+  <link rel="stylesheet" href="../../css/responsive.css" />
+</head>
+<body>
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <div id="sidebarOverlay" class="sidebar-overlay" onclick="App.toggleSidebar()"></div>
+    <div class="main-area">
+      <header class="topbar" id="topbar"></header>
+      <main class="page-content">
+        <div class="page-header">
+          <h1>✅ Verifikasi Laporan</h1>
+          <p>Periksa dan verifikasi laporan kerusakan yang masuk dari masyarakat.</p>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr><th>No</th><th>Judul</th><th>Pelapor</th><th>Kategori</th><th>Lokasi</th><th>Tanggal</th><th>Aksi</th></tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+
+        <!-- Verify Modal -->
+        <div class="modal-overlay" id="verifyModal">
+          <div class="modal" style="max-width:580px;">
+            <div class="modal-header">
+              <h2>Verifikasi Laporan</h2>
+              <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body" id="verifyContent"></div>
+            <div class="modal-footer" id="verifyFooter"></div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="../../js/db.js"></script>
+  <script src="../../js/auth.js"></script>
+  <script src="../../js/utils.js"></script>
+  <script src="../../js/app.js"></script>
+  <script>
+    let currentId = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!App.init('Verifikasi Laporan', ['admin'])) return;
+      loadTable();
+    });
+
+    function loadTable() {
+      const pending = DB.filter('laporan', l => l.status === 'terkirim')
+        .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+      const tbody = document.getElementById('tableBody');
+
+      if (pending.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="icon">✅</div><h3>Semua Laporan Sudah Diverifikasi</h3><p>Tidak ada laporan yang menunggu verifikasi.</p></div></td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = pending.map((l, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td><strong>${Utils.escapeHtml(Utils.truncate(l.judul, 28))}</strong></td>
+          <td>${Utils.getUserName(l.userId)}</td>
+          <td>${Utils.getCategoryIcon(l.kategoriId)} ${Utils.getCategoryName(l.kategoriId)}</td>
+          <td>${Utils.escapeHtml(Utils.truncate(l.lokasi, 20))}</td>
+          <td style="font-size:var(--font-size-xs);color:var(--text-muted)">${Utils.formatDate(l.createdAt)}</td>
+          <td>
+            <div class="action-btns">
+              <button class="action-btn approve" title="Verifikasi" onclick="openVerify('${l.id}')">✅</button>
+              <button class="action-btn delete" title="Tolak" onclick="rejectReport('${l.id}')">❌</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function openVerify(id) {
+      currentId = id;
+      const l = DB.getById('laporan', id);
+      document.getElementById('verifyContent').innerHTML = `
+        <div class="detail-item"><div class="label">Judul</div><div class="value">${Utils.escapeHtml(l.judul)}</div></div>
+        <div class="detail-item"><div class="label">Pelapor</div><div class="value">${Utils.getUserName(l.userId)}</div></div>
+        <div class="detail-item"><div class="label">Kategori</div><div class="value">${Utils.getCategoryIcon(l.kategoriId)} ${Utils.getCategoryName(l.kategoriId)}</div></div>
+        <div class="detail-item"><div class="label">Lokasi</div><div class="value">${Utils.escapeHtml(l.lokasi)}</div></div>
+        <div class="detail-item"><div class="label">Deskripsi</div><div class="value">${Utils.escapeHtml(l.deskripsi)}</div></div>
+        ${l.foto ? `<div class="detail-item"><div class="label">Foto</div><div class="file-preview" style="display:block"><img src="${l.foto}" alt="Foto"/></div></div>` : ''}
+        <div class="form-group" style="margin-top:16px;">
+          <label class="form-label">Catatan Admin</label>
+          <textarea id="catatanAdmin" class="form-textarea" placeholder="Tambahkan catatan verifikasi (opsional)..." rows="2"></textarea>
+        </div>
+      `;
+      document.getElementById('verifyFooter').innerHTML = `
+        <button class="btn btn-outline" onclick="closeModal()">Batal</button>
+        <button class="btn btn-danger" onclick="doReject()">❌ Tolak</button>
+        <button class="btn btn-success" onclick="doVerify()">✅ Verifikasi</button>
+      `;
+      document.getElementById('verifyModal').classList.add('show');
+    }
+
+    function doVerify() {
+      const catatan = document.getElementById('catatanAdmin').value.trim();
+      DB.update('laporan', currentId, { status: 'diverifikasi', catatanAdmin: catatan || 'Laporan valid.' });
+      closeModal();
+      loadTable();
+      Utils.showToast('Laporan berhasil diverifikasi.', 'success');
+    }
+
+    function doReject() {
+      const catatan = document.getElementById('catatanAdmin').value.trim();
+      DB.update('laporan', currentId, { status: 'ditolak', catatanAdmin: catatan || 'Laporan ditolak.' });
+      closeModal();
+      loadTable();
+      Utils.showToast('Laporan ditolak.', 'warning');
+    }
+
+    function rejectReport(id) {
+      if (confirm('Yakin ingin menolak laporan ini?')) {
+        DB.update('laporan', id, { status: 'ditolak', catatanAdmin: 'Laporan ditolak oleh admin.' });
+        loadTable();
+        Utils.showToast('Laporan ditolak.', 'warning');
+      }
+    }
+
+    function closeModal() { document.getElementById('verifyModal').classList.remove('show'); }
+    document.getElementById('verifyModal').addEventListener('click', e => { if (e.target.classList.contains('modal-overlay')) closeModal(); });
+  </script>
+</body>
+</html>

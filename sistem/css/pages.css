@@ -1,0 +1,315 @@
+/* ═══════════════════════════════════════════════════
+   PAGES.CSS — Page-specific Styles
+   ═══════════════════════════════════════════════════ */
+
+/* ── Login Page ── */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-body);
+  position: relative;
+  overflow: hidden;
+}
+
+.login-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.login-bg .orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.25;
+}
+
+.login-bg .orb-1 {
+  width: 500px; height: 500px;
+  background: var(--accent-primary);
+  top: -150px; left: -100px;
+  animation: floatOrb 20s ease-in-out infinite;
+}
+
+.login-bg .orb-2 {
+  width: 400px; height: 400px;
+  background: var(--accent-violet);
+  bottom: -100px; right: -80px;
+  animation: floatOrb 20s ease-in-out infinite 7s;
+}
+
+.login-bg .orb-3 {
+  width: 300px; height: 300px;
+  background: var(--accent-cyan);
+  top: 40%; left: 50%;
+  animation: floatOrb 20s ease-in-out infinite 14s;
+}
+
+@keyframes floatOrb {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -40px) scale(1.08); }
+  66% { transform: translate(-20px, 20px) scale(0.95); }
+}
+
+.login-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+.login-container {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 440px;
+  padding: 20px;
+}
+
+.login-card {
+  background: rgba(17, 26, 46, 0.8);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: var(--space-2xl);
+  box-shadow: var(--shadow-lg);
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: var(--space-xl);
+}
+
+.login-logo {
+  width: 56px; height: 56px;
+  border-radius: var(--radius-lg);
+  background: var(--gradient-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px;
+  margin: 0 auto var(--space-md);
+  box-shadow: var(--shadow-glow);
+}
+
+.login-header h1 {
+  font-size: var(--font-size-xl);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--space-xs);
+}
+
+.login-header p {
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.login-footer {
+  text-align: center;
+  margin-top: var(--space-lg);
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.login-footer a {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.login-demo {
+  margin-top: var(--space-lg);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--border-default);
+}
+
+.login-demo h4 {
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: var(--space-sm);
+  text-align: center;
+}
+
+.demo-accounts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.demo-btn {
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-default);
+  background: rgba(255,255,255,0.02);
+  color: var(--text-secondary);
+  font-family: var(--font-family);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+  transition: var(--transition-fast);
+  text-align: center;
+}
+
+.demo-btn:hover {
+  background: var(--accent-primary-light);
+  color: var(--accent-primary);
+  border-color: rgba(99,102,241,0.3);
+}
+
+.demo-btn .role {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.demo-btn .email {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* ── Dashboard Cards Row ── */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-lg);
+}
+
+.dashboard-grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.dashboard-full {
+  grid-column: 1 / -1;
+}
+
+/* ── Recent Activity List ── */
+.activity-list {
+  list-style: none;
+}
+
+.activity-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.activity-item:last-child { border-bottom: none; }
+
+.activity-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.activity-content {
+  flex: 1;
+}
+
+.activity-content p {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.activity-content .time {
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ── Photo Grid ── */
+.photo-evidence {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+.photo-thumb {
+  aspect-ratio: 1;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border-default);
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.photo-thumb:hover {
+  border-color: var(--accent-primary);
+  transform: scale(1.03);
+}
+
+.photo-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ── Report Detail ── */
+.report-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-lg);
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+
+.report-id {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+/* ── Cetak / Print Preview ── */
+.print-preview {
+  background: #fff;
+  color: #1a1a1a;
+  padding: var(--space-2xl);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-default);
+}
+
+.print-preview h1 {
+  color: #111;
+  font-size: var(--font-size-xl);
+  text-align: center;
+  margin-bottom: var(--space-sm);
+}
+
+.print-preview .subtitle {
+  text-align: center;
+  color: #666;
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--space-xl);
+  padding-bottom: var(--space-md);
+  border-bottom: 2px solid #eee;
+}
+
+.print-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.print-preview th, .print-preview td {
+  padding: 10px 14px;
+  border: 1px solid #ddd;
+  text-align: left;
+}
+
+.print-preview th {
+  background: #f5f5f5;
+  font-weight: 600;
+}
+
+.print-preview tr:nth-child(even) td {
+  background: #fafafa;
+}
